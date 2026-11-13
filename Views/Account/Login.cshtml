@@ -1,0 +1,60 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    Layout = "_AuthLayout";
+}
+
+<h1 class="dt-h1">Welcome back</h1>
+<p class="text-secondary-dt mb-4">Sign in to continue to AutoTrack.</p>
+
+<form asp-action="Login" asp-route-returnUrl="@(ViewData["ReturnUrl"] as string)" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert py-2"></div>
+
+    <div class="mb-3">
+        <label asp-for="Username" class="form-label"></label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input asp-for="Username" class="form-control" placeholder="owner, desk, mechanic or your e-mail" autocomplete="username" autofocus />
+        </div>
+        <span asp-validation-for="Username" class="field-validation-msg"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label"></label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input asp-for="Password" class="form-control" placeholder="Your password" autocomplete="current-password" />
+            <button class="btn btn-outline-dt" type="button" data-toggle-password aria-label="Show or hide password">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+        <span asp-validation-for="Password" class="field-validation-msg"></span>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="form-check">
+            <input asp-for="RememberMe" class="form-check-input" />
+            <label asp-for="RememberMe" class="form-check-label"></label>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 btn-lg">
+        Sign in <i class="bi bi-arrow-right ms-1"></i>
+    </button>
+</form>
+
+<p class="text-center mt-4 mb-0 text-secondary-dt">
+    New customer? <a asp-action="Register" class="dt-link">Create an account</a>
+</p>
+
+<div class="dt-demo mt-4">
+    <div class="dt-demo-title"><i class="bi bi-info-circle me-1"></i>Demo accounts (mock data)</div>
+    <table class="table table-sm mb-0">
+        <tbody>
+            <tr><td>Owner</td><td><code>owner</code> / <code>owner123</code></td></tr>
+            <tr><td>Front desk</td><td><code>desk</code> / <code>desk123</code></td></tr>
+            <tr><td>Mechanic</td><td><code>mechanic</code> / <code>mech123</code></td></tr>
+            <tr><td>Customer</td><td><code>customer</code> / <code>cust123</code></td></tr>
+        </tbody>
+    </table>
+</div>

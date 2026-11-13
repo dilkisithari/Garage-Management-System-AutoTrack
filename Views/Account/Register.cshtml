@@ -1,0 +1,70 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Create account";
+    Layout = "_AuthLayout";
+}
+
+<h1 class="dt-h1">Create your account</h1>
+<p class="text-secondary-dt mb-4">Book services, track your vehicle and see your service history.</p>
+
+<form asp-action="Register" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert py-2"></div>
+
+    <div class="mb-3">
+        <label asp-for="FullName" class="form-label"></label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input asp-for="FullName" class="form-control" placeholder="Kasun Silva" autocomplete="name" autofocus />
+        </div>
+        <span asp-validation-for="FullName" class="field-validation-msg"></span>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label asp-for="Phone" class="form-label"></label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                <input asp-for="Phone" class="form-control" placeholder="0771234567" autocomplete="tel" />
+            </div>
+            <span asp-validation-for="Phone" class="field-validation-msg"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Email" class="form-label"></label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                <input asp-for="Email" class="form-control" placeholder="you@example.com" autocomplete="email" />
+            </div>
+            <span asp-validation-for="Email" class="field-validation-msg"></span>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <label asp-for="Password" class="form-label"></label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input asp-for="Password" class="form-control" placeholder="At least 6 characters" autocomplete="new-password" />
+                <button class="btn btn-outline-dt" type="button" data-toggle-password aria-label="Show or hide password">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+            <span asp-validation-for="Password" class="field-validation-msg"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="ConfirmPassword" class="form-label"></label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                <input asp-for="ConfirmPassword" class="form-control" placeholder="Repeat password" autocomplete="new-password" />
+            </div>
+            <span asp-validation-for="ConfirmPassword" class="field-validation-msg"></span>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 btn-lg">
+        Create account <i class="bi bi-arrow-right ms-1"></i>
+    </button>
+</form>
+
+<p class="text-center mt-4 mb-0 text-secondary-dt">
+    Already registered? <a asp-action="Login" class="dt-link">Sign in</a>
+</p>

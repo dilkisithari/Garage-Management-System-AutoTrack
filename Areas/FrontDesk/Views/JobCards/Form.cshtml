@@ -1,0 +1,158 @@
+@model JobCardViewModel
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "New job card" : $"Edit {Model.JobNo}";
+}
+
+<div class="dt-page-head">
+    <div>
+        <a asp-action="Board" class="dt-back"><i class="bi bi-arrow-left me-1"></i>Back to job board</a>
+        <h1 class="dt-h1 mb-1">@(isNew ? "New job card" : "Edit job card")</h1>
+        <p class="text-secondary-dt mb-0">
+            @if (isNew) { <text>Fill in the vehicle, complaint, tasks, parts and labour.</text> }
+            else { <text><strong>@Model.JobNo</strong> &middot; opened @Model.DateOpened.ToString("dd MMM yyyy")</text> }
+        </p>
+    </div>
+</div>
+
+<form id="jobcard-form" method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id.ToString())" novalidate>
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="JobNo" />
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert"></div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+
+            <!-- Job details -->
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-info-circle me-2 text-red"></i>Job details</h2>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label asp-for="VehicleNo" class="form-label"></label>
+                        <input asp-for="VehicleNo" class="form-control text-uppercase" placeholder="CAB-1234" />
+                        <span asp-validation-for="VehicleNo" class="field-validation-msg"></span>
+                    </div>
+                    <div class="col-md-5">
+                        <label asp-for="CustomerName" class="form-label"></label>
+                        <input asp-for="CustomerName" class="form-control" placeholder="Customer name" />
+                        <span asp-validation-for="CustomerName" class="field-validation-msg"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="DateOpened" class="form-label"></label>
+                        <input asp-for="DateOpened" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Mechanic" class="form-label">Assigned mechanic</label>
+                        <select asp-for="Mechanic" class="form-select" asp-items="(SelectList)ViewBag.Mechanics">
+                            <option value="">Select mechanic</option>
+                        </select>
+                        <span asp-validation-for="Mechanic" class="field-validation-msg"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Status" class="form-label"></label>
+                        <select asp-for="Status" class="form-select" asp-items="(SelectList)ViewBag.Statuses"></select>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Complaint" class="form-label">Customer complaint</label>
+                        <textarea asp-for="Complaint" class="form-control" rows="3" placeholder="Describe the problem reported by the customer"></textarea>
+                        <span asp-validation-for="Complaint" class="field-validation-msg"></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tasks -->
+            <section class="dt-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="dt-h2 mb-0"><i class="bi bi-list-check me-2 text-red"></i>Tasks</h2>
+                    <button type="button" class="btn btn-sm btn-outline-dt" data-add-row="task"><i class="bi bi-plus-lg me-1"></i>Add task</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dt-table align-middle mb-0">
+                        <thead><tr><th class="text-center">Done</th><th>Task</th><th></th></tr></thead>
+                        <tbody data-rows="task">
+                            @for (var i = 0; i < Model.Tasks.Count; i++)
+                            {
+                                @await Html.PartialAsync("_TaskRow", Model.Tasks[i], new ViewDataDictionary(ViewData) { { "i", i } })
+                            }
+                            <tr class="jc-empty"><td colspan="3" class="text-center text-secondary-dt py-3">No tasks added yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Parts -->
+            <section class="dt-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="dt-h2 mb-0"><i class="bi bi-gear-wide-connected me-2 text-red"></i>Parts used</h2>
+                    <button type="button" class="btn btn-sm btn-outline-dt" data-add-row="part"><i class="bi bi-plus-lg me-1"></i>Add part</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dt-table align-middle mb-0">
+                        <thead><tr><th>Part</th><th class="text-end">Qty</th><th class="text-end">Unit price (LKR)</th><th class="text-end">Total (LKR)</th><th></th></tr></thead>
+                        <tbody data-rows="part">
+                            @for (var i = 0; i < Model.Parts.Count; i++)
+                            {
+                                @await Html.PartialAsync("_PartRow", Model.Parts[i], new ViewDataDictionary(ViewData) { { "i", i } })
+                            }
+                            <tr class="jc-empty"><td colspan="5" class="text-center text-secondary-dt py-3">No parts added yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Labour -->
+            <section class="dt-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="dt-h2 mb-0"><i class="bi bi-stopwatch me-2 text-red"></i>Labour</h2>
+                    <button type="button" class="btn btn-sm btn-outline-dt" data-add-row="labour"><i class="bi bi-plus-lg me-1"></i>Add labour</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dt-table align-middle mb-0">
+                        <thead><tr><th>Work done</th><th class="text-end">Hours</th><th class="text-end">Rate / hour (LKR)</th><th class="text-end">Total (LKR)</th><th></th></tr></thead>
+                        <tbody data-rows="labour">
+                            @for (var i = 0; i < Model.Labour.Count; i++)
+                            {
+                                @await Html.PartialAsync("_LabourRow", Model.Labour[i], new ViewDataDictionary(ViewData) { { "i", i } })
+                            }
+                            <tr class="jc-empty"><td colspan="5" class="text-center text-secondary-dt py-3">No labour added yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Notes -->
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-chat-left-text me-2 text-red"></i>Notes</h2>
+                <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Optional notes for the mechanic or front desk"></textarea>
+            </section>
+        </div>
+
+        <!-- Summary -->
+        <div class="col-lg-4">
+            <aside class="dt-card dt-summary p-4">
+                <h2 class="dt-h2">Cost summary</h2>
+                <dl class="dt-summary-list">
+                    <div><dt>Parts</dt><dd id="total-parts">LKR 0.00</dd></div>
+                    <div><dt>Labour</dt><dd id="total-labour">LKR 0.00</dd></div>
+                    <div class="dt-summary-total"><dt>Total</dt><dd id="total-grand">LKR 0.00</dd></div>
+                </dl>
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check2-circle me-1"></i>@(isNew ? "Create job card" : "Save changes")</button>
+                    <a asp-action="Board" class="btn btn-outline-dt">Cancel</a>
+                </div>
+                <p class="text-secondary-dt small mt-3 mb-0">Totals are calculated here for preview. The final amounts are recalculated by the database later.</p>
+            </aside>
+        </div>
+    </div>
+</form>
+
+<!-- Row templates used by "Add" buttons (JavaScript replaces __INDEX__) -->
+<template id="tpl-task">@await Html.PartialAsync("_TaskRow", new JobTaskItem(), new ViewDataDictionary(ViewData) { { "i", "__INDEX__" } })</template>
+<template id="tpl-part">@await Html.PartialAsync("_PartRow", new JobPartItem(), new ViewDataDictionary(ViewData) { { "i", "__INDEX__" } })</template>
+<template id="tpl-labour">@await Html.PartialAsync("_LabourRow", new JobLabourItem(), new ViewDataDictionary(ViewData) { { "i", "__INDEX__" } })</template>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/jobcard-form.js" asp-append-version="true"></script>
+}

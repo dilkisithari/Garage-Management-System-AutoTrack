@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - D Tech Motors AutoTrack</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@@0,400;0,600;0,700;0,800;1,700;1,800&family=Inter:wght@@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="dt-body">
+    <div class="dt-auth">
+        <aside class="dt-auth-hero">
+            <a class="dt-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                <i class="bi bi-gear-wide-connected dt-brand-icon"></i>
+                <span class="dt-brand-text">
+                    <span class="dt-brand-name">D Tech <span class="text-red">Motors</span></span>
+                    <small>Service &bull; Modify &bull; Drive Better</small>
+                </span>
+            </a>
+
+            <div class="dt-auth-hero-copy">
+                <p class="dt-eyebrow"><span></span>AutoTrack Garage Management</p>
+                <h2 class="dt-display">Your Trusted <span class="text-red">Garage</span> Partner</h2>
+                <p class="text-secondary-dt">Quotations, job cards, parts, invoices and payroll in one connected system.</p>
+            </div>
+
+            <div class="dt-auth-hero-foot text-secondary-dt">
+                <i class="bi bi-geo-alt-fill text-red me-1"></i>Battaramulla, Sri Lanka
+            </div>
+        </aside>
+
+        <section class="dt-auth-panel">
+            <div class="dt-auth-card">
+                @if (TempData["Success"] is string okMessage)
+                {
+                    <div class="alert alert-success alert-dismissible fade show dt-alert" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i>@okMessage
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @RenderBody()
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/site.js" asp-append-version="true"></script>
+</body>
+</html>

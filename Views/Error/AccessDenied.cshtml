@@ -1,0 +1,15 @@
+@{
+    ViewData["Title"] = "Access denied";
+}
+<div class="dt-error text-center">
+    <div class="dt-error-code">403</div>
+    <h1 class="dt-h1">Access denied</h1>
+    <p class="text-secondary-dt mb-4">
+        Your role does not have permission to open this page.<br />
+        If you think this is a mistake, ask the owner to check your account role.
+    </p>
+    <div class="d-flex justify-content-center gap-2">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-primary"><i class="bi bi-house me-1"></i>Go to home</a>
+        <a href="javascript:history.back()" class="btn btn-outline-dt">Go back</a>
+    </div>
+</div>

@@ -1,0 +1,34 @@
+﻿@using System.Security.Claims
+@{
+    ViewData["Title"] = "Welcome";
+    var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    var fullName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name;
+}
+
+<div class="dt-card p-4 p-lg-5 mb-4">
+    <p class="dt-eyebrow"><span></span>Signed in as <strong class="ms-1">@role</strong></p>
+    <h1 class="dt-display">Welcome, <span class="text-red">@fullName</span></h1>
+    <p class="text-secondary-dt mb-0">
+        Your role-specific dashboard will appear here once the other pages are connected.
+        Use the menu above to open the pages that are ready.
+    </p>
+</div>
+
+@if (role == "FrontDesk" || role == "Owner")
+{
+    <div class="row g-3">
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="FrontDesk" asp-controller="JobCards" asp-action="Board">
+                <i class="bi bi-clipboard-check"></i>
+                <div><strong>Job card board</strong><span>See every job by status</span></div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="FrontDesk" asp-controller="JobCards" asp-action="Create">
+                <i class="bi bi-plus-circle"></i>
+                <div><strong>New job card</strong><span>Open a job for a vehicle</span></div>
+            </a>
+        </div>
+    </div>
+}
+

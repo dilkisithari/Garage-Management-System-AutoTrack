@@ -1,0 +1,58 @@
+﻿@{
+    ViewData["Title"] = "Home";
+}
+
+<section class="dt-hero">
+    <div class="dt-hero-copy">
+        <p class="dt-eyebrow"><span></span>Welcome to D Tech Motors</p>
+        <h1 class="dt-display dt-display-xl">Your Trusted <br /><span class="text-red">Garage</span> Partner</h1>
+        <p class="dt-tagline">Service. Modify. Drive Better.</p>
+        <p class="text-secondary-dt mb-4">Expert vehicle service, modification and maintenance with the latest technology.</p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="#services" class="btn btn-primary btn-lg">Our Services <i class="bi bi-arrow-right ms-1"></i></a>
+            <a href="#about" class="btn btn-outline-dt btn-lg">About Us</a>
+            @if (User.Identity?.IsAuthenticated != true)
+            {
+                <a asp-controller="Account" asp-action="Login" class="btn btn-outline-dt btn-lg"><i class="bi bi-box-arrow-in-right me-1"></i>Sign in</a>
+            }
+        </div>
+    </div>
+    <div class="dt-hero-art" aria-hidden="true">
+        <i class="bi bi-gear-wide-connected dt-hero-gear"></i>
+        <div class="dt-hero-glow"></div>
+    </div>
+</section>
+
+<section id="services" class="dt-features">
+    <div class="dt-feature">
+        <i class="bi bi-car-front-fill"></i>
+        <h3>Vehicle Service</h3>
+        <p>Keep your ride in top shape</p>
+    </div>
+    <div class="dt-feature">
+        <i class="bi bi-wrench-adjustable"></i>
+        <h3>Modification</h3>
+        <p>Upgrade your style</p>
+    </div>
+    <div class="dt-feature">
+        <i class="bi bi-gear-fill"></i>
+        <h3>Genuine Parts</h3>
+        <p>Quality you can trust</p>
+    </div>
+    <div class="dt-feature">
+        <i class="bi bi-headset"></i>
+        <h3>Expert Support</h3>
+        <p>We're here to help</p>
+    </div>
+</section>
+
+<section id="about" class="dt-cta">
+    <div>
+        <span class="dt-bar"></span>
+        <h2 class="dt-display">Drive with <span class="text-red">Confidence</span></h2>
+        <p class="text-secondary-dt mb-0">Because your vehicle deserves the best care.</p>
+    </div>
+    <a asp-controller="Account" asp-action="Register" class="btn btn-primary btn-lg">
+        <i class="bi bi-calendar-check me-1"></i>Book Now
+    </a>
+</section>

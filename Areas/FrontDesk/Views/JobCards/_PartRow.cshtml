@@ -1,0 +1,20 @@
+@model JobPartItem
+@{
+    var i = ViewData["i"]?.ToString() ?? "0";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+<tr class="jc-row">
+    <td>
+        <input type="text" class="form-control form-control-sm" name="Parts[@(i)].PartName" value="@Model.PartName" maxlength="100" placeholder="Part name" />
+    </td>
+    <td style="width:6rem">
+        <input type="number" class="form-control form-control-sm text-end js-qty" name="Parts[@(i)].Quantity" value="@Model.Quantity" min="1" step="1" />
+    </td>
+    <td style="width:9rem">
+        <input type="number" class="form-control form-control-sm text-end js-price" name="Parts[@(i)].UnitPrice" value="@Model.UnitPrice.ToString("0.00", inv)" min="0" step="0.01" />
+    </td>
+    <td class="text-end fw-semibold js-line-total" style="width:9rem">0.00</td>
+    <td class="text-end" style="width:3rem">
+        <button type="button" class="btn btn-sm btn-icon-danger btn-remove-row" aria-label="Remove part"><i class="bi bi-trash3"></i></button>
+    </td>
+</tr>

@@ -1,0 +1,14 @@
+@model JobTaskItem
+@{ var i = ViewData["i"]?.ToString() ?? "0"; }
+<tr class="jc-row">
+    <td class="text-center" style="width:3rem">
+        <input type="checkbox" class="form-check-input" name="Tasks[@(i)].Done" value="true" @(Model.Done ? "checked" : null) aria-label="Task done" />
+        <input type="hidden" name="Tasks[@(i)].Done" value="false" />
+    </td>
+    <td>
+        <input type="text" class="form-control form-control-sm" name="Tasks[@(i)].Description" value="@Model.Description" maxlength="150" placeholder="e.g. Inspect brake pads" />
+    </td>
+    <td class="text-end" style="width:3rem">
+        <button type="button" class="btn btn-sm btn-icon-danger btn-remove-row" aria-label="Remove task"><i class="bi bi-trash3"></i></button>
+    </td>
+</tr>

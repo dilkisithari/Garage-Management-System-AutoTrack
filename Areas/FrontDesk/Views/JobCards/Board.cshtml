@@ -1,0 +1,90 @@
+@model List<JobCardViewModel>
+@{
+    ViewData["Title"] = "Job cards";
+    var mechanics = (string[])ViewBag.Mechanics;
+    var statuses = (string[])ViewBag.Statuses;
+    var statusIcons = new Dictionary<string, string>
+    {
+        ["Pending"] = "bi-hourglass-split",
+        ["In Progress"] = "bi-wrench-adjustable",
+        ["Waiting for Parts"] = "bi-box-seam",
+        ["Completed"] = "bi-check-circle"
+    };
+}
+
+<div class="dt-page-head">
+    <div>
+        <h1 class="dt-h1 mb-1">Job cards</h1>
+        <p class="text-secondary-dt mb-0">@Model.Count jobs in the workshop</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New job card</a>
+</div>
+
+<div class="dt-card dt-toolbar mb-4">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-5">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input id="filter-search" type="search" class="form-control" placeholder="Search vehicle no., customer or complaint" />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select id="filter-mechanic" class="form-select" aria-label="Filter by mechanic">
+                <option value="">All mechanics</option>
+                @foreach (var m in mechanics)
+                {
+                    <option value="@m">@m</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 text-md-end">
+            <button id="filter-clear" type="button" class="btn btn-outline-dt w-100 w-md-auto">
+                <i class="bi bi-x-circle me-1"></i>Clear filters
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="dt-board">
+    @foreach (var status in statuses)
+    {
+        var slug = status.ToLower().Replace(" ", "-");
+        var jobs = Model.Where(j => j.Status == status).ToList();
+        <section class="dt-board-col" data-status="@slug">
+            <header class="dt-board-head status-@slug">
+                <span><i class="bi @statusIcons[status] me-2"></i>@status</span>
+                <span class="badge col-count">@jobs.Count</span>
+            </header>
+
+            <div class="dt-board-body">
+                @foreach (var job in jobs)
+                {
+                    var searchText = $"{job.VehicleNo} {job.CustomerName} {job.Complaint} {job.JobNo}".ToLower();
+                    <article class="dt-job job-card status-@slug"
+                             data-mechanic="@job.Mechanic"
+                             data-search="@searchText">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="dt-job-no">@job.JobNo</span>
+                            <span class="text-secondary-dt small">@job.DateOpened.ToString("dd MMM yyyy")</span>
+                        </div>
+                        <h3 class="dt-job-vehicle">@job.VehicleNo</h3>
+                        <p class="dt-job-customer"><i class="bi bi-person me-1"></i>@job.CustomerName</p>
+                        <p class="dt-job-complaint">@job.Complaint</p>
+                        <div class="dt-job-foot">
+                            <span><i class="bi bi-person-gear me-1 text-red"></i>@job.Mechanic</span>
+                            <strong>LKR @job.GrandTotal.ToString("N2")</strong>
+                        </div>
+                        <a asp-action="Edit" asp-route-id="@job.Id" class="stretched-link" aria-label="Open @job.JobNo"></a>
+                    </article>
+                }
+                <div class="dt-board-empty col-empty @(jobs.Any() ? "d-none" : "")">
+                    <i class="bi bi-inbox"></i>No jobs here
+                </div>
+            </div>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/jobcard-board.js" asp-append-version="true"></script>
+}
