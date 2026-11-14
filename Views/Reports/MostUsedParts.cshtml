@@ -1,0 +1,96 @@
+@model MostUsedPartsViewModel
+@{
+    ViewData["Title"] = "Most-used parts";
+    ViewData["ReportTitle"] = "Most-used parts report";
+    ViewData["ShowTop"] = true;
+    var valid = ViewData.ModelState.IsValid;
+    var f = Model.Filter;
+    var period = valid && f.From.HasValue && f.To.HasValue ? $"{ReportFormat.Date(f.From.Value)} to {ReportFormat.Date(f.To.Value)}" : null;
+    ViewData["Period"] = period;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+}
+
+<partial name="_ReportNav" />
+<partial name="_PrintHeader" />
+
+<div class="dt-page-head rp-noprint">
+    <div>
+        <h1 class="dt-h1 mb-1">Most-used parts</h1>
+        <p class="text-secondary-dt mb-0">Spare parts fitted on completed jobs, ranked by quantity used.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-dt" data-rp-export="#parts-table" data-filename="most-used-parts" disabled="@(!(valid && Model.HasData))"><i class="bi bi-download me-1"></i>Export CSV</button>
+        <button type="button" class="btn btn-primary" data-rp-print><i class="bi bi-printer me-1"></i>Print</button>
+    </div>
+</div>
+
+<partial name="_ReportToolbar" model="Model.Filter" />
+
+@if (!valid)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-calendar-x"></i>Fix the filter above and press Apply to see the report.</div>
+}
+else if (!Model.HasData)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-inbox"></i>No parts were used between @period.</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-bar-chart me-2 text-red"></i>Quantity used</h2>
+                <div class="rp-chart-box is-short"><canvas id="partsChart" role="img" aria-label="Quantity used for each part"></canvas></div>
+            </section>
+        </div>
+        <div class="col-12">
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-table me-2 text-red"></i>Top @Model.Rows.Count parts</h2>
+                <div class="table-responsive">
+                    <table id="parts-table" class="table dt-table rp-table align-middle mb-0">
+                        <thead>
+                            <tr><th>#</th><th>Code</th><th>Part</th><th>Category</th><th class="num">Qty</th><th class="num">Jobs</th><th class="num">Revenue (LKR)</th><th class="num">Cost (LKR)</th><th class="num">Margin (LKR)</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.Rows)
+                            {
+                                <tr>
+                                    <td data-csv="@r.Rank"><span class="rp-rank @(r.Rank <= 3 ? "top" : "")">@r.Rank</span></td>
+                                    <td>@r.Code</td>
+                                    <td>@r.Name</td>
+                                    <td>@r.Category</td>
+                                    <td class="num"><strong>@r.QtyUsed</strong></td>
+                                    <td class="num">@r.Jobs</td>
+                                    <td class="num" data-csv="@ReportFormat.Raw(r.Revenue)">@ReportFormat.Number(r.Revenue)</td>
+                                    <td class="num" data-csv="@ReportFormat.Raw(r.Cost)">@ReportFormat.Number(r.Cost)</td>
+                                    <td class="num" data-csv="@ReportFormat.Raw(r.Margin)">@ReportFormat.Number(r.Margin)</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td></td><td></td><td>Total</td><td></td>
+                                <td class="num">@Model.TotalQty</td>
+                                <td class="num"></td>
+                                <td class="num" data-csv="@ReportFormat.Raw(Model.TotalRevenue)">@ReportFormat.Number(Model.TotalRevenue)</td>
+                                <td class="num" data-csv="@ReportFormat.Raw(Model.TotalCost)">@ReportFormat.Number(Model.TotalCost)</td>
+                                <td class="num" data-csv="@ReportFormat.Raw(Model.TotalMargin)">@ReportFormat.Number(Model.TotalMargin)</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ReportScripts" />
+    @if (valid && Model.HasData)
+    {
+        <script>RP.hbar('partsChart', @Json.Serialize(Model.Chart));</script>
+    }
+}

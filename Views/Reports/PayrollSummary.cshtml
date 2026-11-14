@@ -1,0 +1,118 @@
+@model PayrollSummaryViewModel
+@{
+    ViewData["Title"] = "Payroll summary";
+    ViewData["ReportTitle"] = "Payroll summary report";
+    var valid = ViewData.ModelState.IsValid;
+    var f = Model.Filter;
+    var period = valid && f.From.HasValue && f.To.HasValue ? $"{ReportFormat.Date(f.From.Value)} to {ReportFormat.Date(f.To.Value)}" : null;
+    ViewData["Period"] = period;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+}
+
+<partial name="_ReportNav" />
+<partial name="_PrintHeader" />
+
+<div class="dt-page-head rp-noprint">
+    <div>
+        <h1 class="dt-h1 mb-1">Payroll summary</h1>
+        <p class="text-secondary-dt mb-0">Hours, overtime, EPF and net salary for every employee. Every pay month in the period is included.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-dt" data-rp-export="#payroll-table" data-filename="payroll-summary" disabled="@(!(valid && Model.HasData))"><i class="bi bi-download me-1"></i>Export CSV</button>
+        <button type="button" class="btn btn-primary" data-rp-print><i class="bi bi-printer me-1"></i>Print</button>
+    </div>
+</div>
+
+<partial name="_ReportToolbar" model="Model.Filter" />
+
+@if (!valid)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-calendar-x"></i>Fix the dates above and press Apply to see the report.</div>
+}
+else if (!Model.HasData)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-inbox"></i>No payroll records between @period.</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="dt-card rp-stat is-success">
+                <span class="rp-stat-icon"><i class="bi bi-wallet2"></i></span>
+                <div><div class="rp-stat-label">Net salaries</div><div class="rp-stat-value">@ReportFormat.Lkr(Model.TotalNet)</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="dt-card rp-stat is-warning">
+                <span class="rp-stat-icon"><i class="bi bi-cash-stack"></i></span>
+                <div><div class="rp-stat-label">Gross pay</div><div class="rp-stat-value">@ReportFormat.Lkr(Model.TotalGross)</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="dt-card rp-stat is-info">
+                <span class="rp-stat-icon"><i class="bi bi-clock-history"></i></span>
+                <div><div class="rp-stat-label">Overtime hours</div><div class="rp-stat-value">@ReportFormat.Hours(Model.TotalOvertimeHours)</div></div>
+            </div>
+        </div>
+    </div>
+
+    <section class="dt-card p-4 mb-4">
+        <h2 class="dt-h2"><i class="bi bi-bar-chart-line me-2 text-red"></i>Payroll by month</h2>
+        <div class="rp-chart-box is-short"><canvas id="payrollChart" role="img" aria-label="Net salaries and EPF by month"></canvas></div>
+    </section>
+
+    <section class="dt-card p-4">
+        <h2 class="dt-h2"><i class="bi bi-table me-2 text-red"></i>Employee payroll</h2>
+        <div class="table-responsive">
+            <table id="payroll-table" class="table dt-table rp-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Employee</th><th>Role</th><th class="num">Months</th><th class="num">Hours</th><th class="num">OT hours</th>
+                        <th class="num">Basic (LKR)</th><th class="num">Overtime (LKR)</th><th class="num">Gross (LKR)</th><th class="num">EPF 8% (LKR)</th><th class="num">Net (LKR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td><strong>@r.Employee</strong></td>
+                            <td>@r.Role</td>
+                            <td class="num">@r.Months</td>
+                            <td class="num">@ReportFormat.Hours(r.Hours)</td>
+                            <td class="num">@ReportFormat.Hours(r.OvertimeHours)</td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.Basic)">@ReportFormat.Number(r.Basic)</td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.OvertimePay)">@ReportFormat.Number(r.OvertimePay)</td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.Gross)">@ReportFormat.Number(r.Gross)</td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.Epf)">@ReportFormat.Number(r.Epf)</td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.Net)"><strong>@ReportFormat.Number(r.Net)</strong></td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Total</td><td></td><td class="num"></td>
+                        <td class="num">@ReportFormat.Hours(Model.TotalHours)</td>
+                        <td class="num">@ReportFormat.Hours(Model.TotalOvertimeHours)</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.TotalBasic)">@ReportFormat.Number(Model.TotalBasic)</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.TotalOvertimePay)">@ReportFormat.Number(Model.TotalOvertimePay)</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.TotalGross)">@ReportFormat.Number(Model.TotalGross)</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.TotalEpf)">@ReportFormat.Number(Model.TotalEpf)</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.TotalNet)">@ReportFormat.Number(Model.TotalNet)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <p class="text-secondary-dt small mt-3 mb-0">Overtime is paid at 1.5 times the hourly rate. The 8% employee EPF is taken from basic pay. The current month shows pay to date.</p>
+    </section>
+}
+
+@section Scripts {
+    <partial name="_ReportScripts" />
+    @if (valid && Model.HasData)
+    {
+        <script>RP.stacked('payrollChart', @Json.Serialize(Model.Chart), { colors: ['#E50914', '#7d7d7d'] });</script>
+    }
+}

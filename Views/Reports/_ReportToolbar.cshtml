@@ -1,0 +1,40 @@
+@model ReportFilterViewModel
+@{
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var showTop = ViewData["ShowTop"] as bool? ?? false;
+}
+<form method="get" asp-controller="Reports" asp-action="@action" class="dt-card dt-toolbar rp-filter rp-noprint mb-4">
+    <div class="row g-2 align-items-start">
+        <div class="col-6 col-md-3">
+            <label asp-for="From" class="form-label"></label>
+            <input asp-for="From" type="date" class="form-control" />
+            <span asp-validation-for="From" class="field-validation-msg"></span>
+        </div>
+        <div class="col-6 col-md-3">
+            <label asp-for="To" class="form-label"></label>
+            <input asp-for="To" type="date" class="form-control"
+                   data-val-rpdaterange="The end date must be on or after the start date."
+                   data-val-rpdaterange-from="From" />
+            <span asp-validation-for="To" class="field-validation-msg"></span>
+        </div>
+        @if (showTop)
+        {
+            <div class="col-6 col-md-2">
+                <label asp-for="Top" class="form-label"></label>
+                <input asp-for="Top" type="number" min="1" max="20" step="1" class="form-control" placeholder="1 - 20" />
+                <span asp-validation-for="Top" class="field-validation-msg"></span>
+            </div>
+        }
+        <div class="col-6 col-md-auto align-self-end">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel me-1"></i>Apply</button>
+        </div>
+    </div>
+    <div class="rp-presets">
+        <small>Quick range:</small>
+        <button type="button" class="rp-chip" data-rp-range="this-month">This month</button>
+        <button type="button" class="rp-chip" data-rp-range="last-month">Last month</button>
+        <button type="button" class="rp-chip" data-rp-range="3-months">Last 3 months</button>
+        <button type="button" class="rp-chip" data-rp-range="6-months">Last 6 months</button>
+        <button type="button" class="rp-chip" data-rp-range="this-year">This year</button>
+    </div>
+</form>

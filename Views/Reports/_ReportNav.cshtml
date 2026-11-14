@@ -1,0 +1,21 @@
+@{
+    var current = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var items = new (string Action, string Text, string Icon)[]
+    {
+        ("Dashboard",        "Dashboard",         "bi-speedometer2"),
+        ("Index",            "All reports",       "bi-grid-3x3-gap"),
+        ("MonthlyRevenue",   "Monthly revenue",   "bi-cash-stack"),
+        ("MostUsedParts",    "Most-used parts",   "bi-gear"),
+        ("MechanicWorkload", "Mechanic workload", "bi-person-workspace"),
+        ("PayrollSummary",   "Payroll summary",   "bi-wallet2"),
+        ("Profit",           "Month-end profit",  "bi-graph-up-arrow")
+    };
+}
+<nav class="rp-nav rp-noprint" aria-label="Reports menu">
+    @foreach (var item in items)
+    {
+        <a asp-controller="Reports" asp-action="@item.Action" class="rp-nav-link @(current == item.Action ? "active" : "")">
+            <i class="bi @item.Icon"></i><span>@item.Text</span>
+        </a>
+    }
+</nav>
