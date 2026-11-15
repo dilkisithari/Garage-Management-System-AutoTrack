@@ -1,0 +1,38 @@
+@{
+    ViewData["Title"] = "Reports";
+    var cards = new (string Action, string Title, string Text, string Icon)[]
+    {
+        ("Dashboard",        "Owner dashboard",    "Today's vehicles, open jobs, low stock and this month's income at a glance.", "bi-speedometer2"),
+        ("MonthlyRevenue",   "Monthly revenue",    "Parts and labour income for every month in the period you choose.",           "bi-cash-stack"),
+        ("MostUsedParts",    "Most-used parts",    "Which spare parts are used the most, with revenue and margin.",               "bi-gear"),
+        ("MechanicWorkload", "Mechanic workload",  "Jobs, hours and labour income for each mechanic, plus jobs open right now.",  "bi-person-workspace"),
+        ("PayrollSummary",   "Payroll summary",    "Hours, overtime, EPF and net salary for every employee.",                     "bi-wallet2"),
+        ("Profit",           "Month-end profit",   "Income minus parts cost, salaries and expenses equals net profit.",           "bi-graph-up-arrow")
+    };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+}
+
+<partial name="_ReportNav" />
+
+<div class="dt-page-head">
+    <div>
+        <h1 class="dt-h1 mb-1">Reports</h1>
+        <p class="text-secondary-dt mb-0">Choose a report. Every report page has a date filter and Export and Print buttons.</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    @foreach (var c in cards)
+    {
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-card rp-hub-card" asp-controller="Reports" asp-action="@c.Action">
+                <i class="bi @c.Icon"></i>
+                <strong>@c.Title</strong>
+                <span>@c.Text</span>
+            </a>
+        </div>
+    }
+</div>

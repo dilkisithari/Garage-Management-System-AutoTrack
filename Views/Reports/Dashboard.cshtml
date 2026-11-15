@@ -1,0 +1,163 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Owner dashboard";
+    var change = Model.IncomeChangePercent;
+    var statusColour = new Dictionary<string, string>
+    {
+        ["Pending"] = "var(--dt-info)",
+        ["In Progress"] = "var(--dt-warning)",
+        ["Waiting for Parts"] = "var(--dt-error)",
+        ["Completed"] = "var(--dt-success)"
+    };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+}
+
+<partial name="_ReportNav" />
+
+<div class="dt-page-head">
+    <div>
+        <h1 class="dt-h1 mb-1">Owner dashboard</h1>
+        <p class="text-secondary-dt mb-0">@Model.Today.ToString("dddd, dd MMMM yyyy") &middot; D Tech Motors, Battaramulla</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="Index" class="btn btn-outline-dt"><i class="bi bi-file-earmark-bar-graph me-1"></i>All reports</a>
+        <a asp-action="Profit" class="btn btn-primary"><i class="bi bi-graph-up-arrow me-1"></i>Month-end profit</a>
+    </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dt-card rp-stat is-info">
+            <span class="rp-stat-icon"><i class="bi bi-car-front-fill"></i></span>
+            <div>
+                <div class="rp-stat-label">Today's vehicles</div>
+                <div class="rp-stat-value">@Model.TodaysVehicles</div>
+                <div class="rp-stat-sub">checked in today</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dt-card rp-stat is-warning">
+            <span class="rp-stat-icon"><i class="bi bi-wrench-adjustable"></i></span>
+            <div>
+                <div class="rp-stat-label">Open jobs</div>
+                <div class="rp-stat-value">@Model.OpenJobs</div>
+                <div class="rp-stat-sub">pending, in progress or waiting for parts</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dt-card rp-stat is-error">
+            <span class="rp-stat-icon"><i class="bi bi-box-seam"></i></span>
+            <div>
+                <div class="rp-stat-label">Low-stock parts</div>
+                <div class="rp-stat-value">@Model.LowStockCount</div>
+                <div class="rp-stat-sub">below their reorder level</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dt-card rp-stat is-success">
+            <span class="rp-stat-icon"><i class="bi bi-cash-coin"></i></span>
+            <div>
+                <div class="rp-stat-label">Income this month</div>
+                <div class="rp-stat-value">@ReportFormat.Lkr(Model.MonthIncome)</div>
+                <div class="rp-stat-sub">
+                    @Model.MonthJobsCompleted jobs completed
+                    @if (change.HasValue)
+                    {
+                        <span class="@(change >= 0 ? "rp-up" : "rp-down")">
+                            <i class="bi @(change >= 0 ? "bi-arrow-up-right" : "bi-arrow-down-right")"></i>@Math.Abs(change.Value)% vs same days last month
+                        </span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <section class="dt-card p-4 h-100">
+            <div class="rp-card-head">
+                <h2 class="dt-h2"><i class="bi bi-bar-chart-line me-2 text-red"></i>Revenue by month</h2>
+                <div class="rp-seg" role="group" aria-label="Chart period">
+                    <button type="button" data-rp-months="6" class="active">6 months</button>
+                    <button type="button" data-rp-months="12">12 months</button>
+                </div>
+            </div>
+            <div class="rp-chart-box"><canvas id="revenueChart" role="img" aria-label="Revenue by month, parts and labour"></canvas></div>
+        </section>
+    </div>
+    <div class="col-lg-4">
+        <section class="dt-card p-4 h-100">
+            <h2 class="dt-h2"><i class="bi bi-pie-chart me-2 text-red"></i>Jobs opened this month</h2>
+            <div class="rp-chart-box"><canvas id="statusChart" role="img" aria-label="Jobs opened this month by status"></canvas></div>
+        </section>
+    </div>
+</div>
+
+<!-- Recent jobs + low stock -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-7">
+        <section class="dt-card p-4 h-100">
+            <h2 class="dt-h2"><i class="bi bi-clock-history me-2 text-red"></i>Recent jobs</h2>
+            <div class="table-responsive">
+                <table class="table dt-table rp-table align-middle mb-0">
+                    <thead>
+                        <tr><th>Vehicle</th><th>Customer</th><th>Mechanic</th><th>Status</th><th class="num">Total</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var j in Model.RecentJobs)
+                        {
+                            <tr>
+                                <td><strong>@j.VehicleNo</strong><div class="small text-secondary-dt">@j.JobNo</div></td>
+                                <td>@j.Customer</td>
+                                <td>@j.Mechanic</td>
+                                <td><span class="rp-status" style="--status: @statusColour[j.Status]">@j.Status</span></td>
+                                <td class="num">@ReportFormat.Lkr(j.Total)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="col-xl-5">
+        <section class="dt-card p-4 h-100">
+            <div class="rp-card-head">
+                <h2 class="dt-h2"><i class="bi bi-exclamation-triangle me-2 text-red"></i>Low stock</h2>
+                <a asp-controller="Home" asp-action="ComingSoon" asp-route-page="Low-stock alerts" class="dt-link small">View alerts</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table dt-table rp-table align-middle mb-0">
+                    <thead><tr><th>Part</th><th class="num">Stock</th><th class="num">Reorder at</th><th>Supplier</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in Model.LowStockParts)
+                        {
+                            <tr class="rp-row-low">
+                                <td>@p.Name<div class="small text-secondary-dt">@p.Code</div></td>
+                                <td class="num"><strong class="rp-down">@p.Stock</strong></td>
+                                <td class="num">@p.ReorderLevel</td>
+                                <td>@p.Supplier</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ReportScripts" />
+    <script>
+        RP.revenueWithSwitch('revenueChart', @Json.Serialize(Model.Revenue));
+        RP.doughnut('statusChart', @Json.Serialize(Model.JobStatus));
+    </script>
+}

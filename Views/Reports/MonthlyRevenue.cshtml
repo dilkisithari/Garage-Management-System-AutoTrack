@@ -1,0 +1,108 @@
+@model MonthlyRevenueViewModel
+@{
+    ViewData["Title"] = "Monthly revenue";
+    ViewData["ReportTitle"] = "Monthly revenue report";
+    var valid = ViewData.ModelState.IsValid;
+    var f = Model.Filter;
+    var period = valid && f.From.HasValue && f.To.HasValue ? $"{ReportFormat.Date(f.From.Value)} to {ReportFormat.Date(f.To.Value)}" : null;
+    ViewData["Period"] = period;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+}
+
+<partial name="_ReportNav" />
+<partial name="_PrintHeader" />
+
+<div class="dt-page-head rp-noprint">
+    <div>
+        <h1 class="dt-h1 mb-1">Monthly revenue</h1>
+        <p class="text-secondary-dt mb-0">Parts and labour income from completed jobs, month by month.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-dt" data-rp-export="#revenue-table" data-filename="monthly-revenue" disabled="@(!(valid && Model.HasData))"><i class="bi bi-download me-1"></i>Export CSV</button>
+        <button type="button" class="btn btn-primary" data-rp-print><i class="bi bi-printer me-1"></i>Print</button>
+    </div>
+</div>
+
+<partial name="_ReportToolbar" model="Model.Filter" />
+
+@if (!valid)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-calendar-x"></i>Fix the dates above and press Apply to see the report.</div>
+}
+else if (!Model.HasData)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-inbox"></i>No completed jobs between @period.</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="dt-card rp-stat is-success">
+                <span class="rp-stat-icon"><i class="bi bi-cash-stack"></i></span>
+                <div><div class="rp-stat-label">Total revenue</div><div class="rp-stat-value">@ReportFormat.Lkr(Model.GrandTotal)</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="dt-card rp-stat is-info">
+                <span class="rp-stat-icon"><i class="bi bi-clipboard-check"></i></span>
+                <div><div class="rp-stat-label">Jobs completed</div><div class="rp-stat-value">@Model.TotalJobs</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="dt-card rp-stat is-warning">
+                <span class="rp-stat-icon"><i class="bi bi-receipt"></i></span>
+                <div><div class="rp-stat-label">Average per job</div><div class="rp-stat-value">@ReportFormat.Lkr(Model.AveragePerJob)</div></div>
+            </div>
+        </div>
+    </div>
+
+    <section class="dt-card p-4 mb-4">
+        <h2 class="dt-h2"><i class="bi bi-bar-chart-line me-2 text-red"></i>Revenue by month</h2>
+        <div class="rp-chart-box"><canvas id="revenueChart" role="img" aria-label="Revenue by month, parts and labour"></canvas></div>
+    </section>
+
+    <section class="dt-card p-4">
+        <h2 class="dt-h2"><i class="bi bi-table me-2 text-red"></i>Revenue table</h2>
+        <div class="table-responsive">
+            <table id="revenue-table" class="table dt-table rp-table align-middle mb-0">
+                <thead>
+                    <tr><th>Month</th><th class="num">Jobs</th><th class="num">Parts (LKR)</th><th class="num">Labour (LKR)</th><th class="num">Total (LKR)</th><th class="num">Avg per job (LKR)</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td>@ReportFormat.MonthLong(r.Month)</td>
+                            <td class="num">@r.Jobs</td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.PartsRevenue)">@ReportFormat.Number(r.PartsRevenue)</td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.LabourRevenue)">@ReportFormat.Number(r.LabourRevenue)</td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.Total)"><strong>@ReportFormat.Number(r.Total)</strong></td>
+                            <td class="num" data-csv="@ReportFormat.Raw(r.AveragePerJob)">@ReportFormat.Number(r.AveragePerJob)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Total</td>
+                        <td class="num">@Model.TotalJobs</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.TotalParts)">@ReportFormat.Number(Model.TotalParts)</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.TotalLabour)">@ReportFormat.Number(Model.TotalLabour)</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.GrandTotal)">@ReportFormat.Number(Model.GrandTotal)</td>
+                        <td class="num" data-csv="@ReportFormat.Raw(Model.AveragePerJob)">@ReportFormat.Number(Model.AveragePerJob)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+}
+
+@section Scripts {
+    <partial name="_ReportScripts" />
+    @if (valid && Model.HasData)
+    {
+        <script>RP.stacked('revenueChart', @Json.Serialize(Model.Chart));</script>
+    }
+}

@@ -1,0 +1,133 @@
+@model MechanicWorkloadViewModel
+@{
+    ViewData["Title"] = "Mechanic workload";
+    ViewData["ReportTitle"] = "Mechanic workload report";
+    var valid = ViewData.ModelState.IsValid;
+    var f = Model.Filter;
+    var period = valid && f.From.HasValue && f.To.HasValue ? $"{ReportFormat.Date(f.From.Value)} to {ReportFormat.Date(f.To.Value)}" : null;
+    ViewData["Period"] = period;
+    var statusColour = new Dictionary<string, string>
+    {
+        ["Pending"] = "var(--dt-info)",
+        ["In Progress"] = "var(--dt-warning)",
+        ["Waiting for Parts"] = "var(--dt-error)",
+        ["Completed"] = "var(--dt-success)"
+    };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+}
+
+<partial name="_ReportNav" />
+<partial name="_PrintHeader" />
+
+<div class="dt-page-head rp-noprint">
+    <div>
+        <h1 class="dt-h1 mb-1">Mechanic workload</h1>
+        <p class="text-secondary-dt mb-0">Jobs assigned to each mechanic in the period, with hours and labour income.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-dt" data-rp-export="#workload-table" data-filename="mechanic-workload" disabled="@(!(valid && Model.HasData))"><i class="bi bi-download me-1"></i>Export CSV</button>
+        <button type="button" class="btn btn-primary" data-rp-print><i class="bi bi-printer me-1"></i>Print</button>
+    </div>
+</div>
+
+<partial name="_ReportToolbar" model="Model.Filter" />
+
+@if (!valid)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-calendar-x"></i>Fix the dates above and press Apply to see the report.</div>
+}
+else if (!Model.HasData)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-inbox"></i>No jobs were assigned between @period.</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-bar-chart me-2 text-red"></i>Jobs per mechanic</h2>
+                <div class="rp-chart-box is-short"><canvas id="workloadChart" role="img" aria-label="Completed and open jobs for each mechanic"></canvas></div>
+            </section>
+        </div>
+        <div class="col-12">
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-table me-2 text-red"></i>Workload table</h2>
+                <div class="table-responsive">
+                    <table id="workload-table" class="table dt-table rp-table align-middle mb-0">
+                        <thead>
+                            <tr><th>Mechanic</th><th class="num">Assigned</th><th class="num">Completed</th><th class="num">Still open</th><th class="num">Hours</th><th class="num">Avg hrs/job</th><th class="num">Labour (LKR)</th><th>Share of jobs</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.Rows)
+                            {
+                                <tr>
+                                    <td><strong>@r.Mechanic</strong></td>
+                                    <td class="num">@r.Assigned</td>
+                                    <td class="num">@r.Completed</td>
+                                    <td class="num">@r.StillOpen</td>
+                                    <td class="num">@ReportFormat.Hours(r.Hours)</td>
+                                    <td class="num">@ReportFormat.Hours(r.AverageHours)</td>
+                                    <td class="num" data-csv="@ReportFormat.Raw(r.LabourRevenue)">@ReportFormat.Number(r.LabourRevenue)</td>
+                                    <td data-csv="@ReportFormat.Raw(r.SharePercent)%">
+                                        <div class="rp-bar">
+                                            <span class="rp-bar-track"><span class="rp-bar-fill" style="width: @ReportFormat.Raw(r.SharePercent)%"></span></span>
+                                            <span class="small">@ReportFormat.Percent(r.SharePercent)</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td>Total</td>
+                                <td class="num">@Model.TotalAssigned</td>
+                                <td class="num">@Model.TotalCompleted</td>
+                                <td class="num">@Model.TotalOpen</td>
+                                <td class="num">@ReportFormat.Hours(Model.TotalHours)</td>
+                                <td class="num"></td>
+                                <td class="num" data-csv="@ReportFormat.Raw(Model.TotalLabour)">@ReportFormat.Number(Model.TotalLabour)</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+}
+
+<section class="dt-card p-4">
+    <h2 class="dt-h2"><i class="bi bi-hourglass-split me-2 text-red"></i>Jobs open right now <span class="badge bg-secondary ms-1">@Model.OpenJobs.Count</span></h2>
+    <p class="text-secondary-dt small">This list shows today's open jobs and ignores the date filter.</p>
+    <div class="table-responsive">
+        <table class="table dt-table rp-table align-middle mb-0">
+            <thead>
+                <tr><th>Mechanic</th><th>Job</th><th>Vehicle</th><th>Customer</th><th>Opened</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var j in Model.OpenJobs)
+                {
+                    <tr>
+                        <td>@j.Mechanic</td>
+                        <td>@j.JobNo</td>
+                        <td><strong>@j.VehicleNo</strong></td>
+                        <td>@j.Customer</td>
+                        <td>@ReportFormat.Date(j.Opened)</td>
+                        <td><span class="rp-status" style="--status: @statusColour[j.Status]">@j.Status</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ReportScripts" />
+    @if (valid && Model.HasData)
+    {
+        <script>RP.stacked('workloadChart', @Json.Serialize(Model.Chart), { count: true, colors: ['#22C55E', '#FACC15'] });</script>
+    }
+}

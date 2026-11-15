@@ -1,0 +1,9 @@
+@using System.Security.Claims
+@{
+    var who = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "";
+}
+<div class="rp-print-only rp-print-head">
+    <h1>D Tech Motors and Modification (Pvt) Ltd, Battaramulla</h1>
+    <p><strong>@ViewData["ReportTitle"]</strong>@if (ViewData["Period"] is string period) {<text> &middot; @period</text>}</p>
+    <p>Printed on @ReportFormat.Date(DateTime.Today) by @who</p>
+</div>

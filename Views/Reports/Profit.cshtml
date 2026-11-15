@@ -1,0 +1,162 @@
+@model ProfitViewModel
+@{
+    ViewData["Title"] = "Month-end profit";
+    ViewData["ReportTitle"] = "Month-end profit statement";
+    var valid = ViewData.ModelState.IsValid;
+    var show = valid && Model.HasData;
+    var isProfit = Model.NetProfit >= 0;
+    ViewData["Period"] = valid && Model.MonthStart != default ? ReportFormat.MonthLong(Model.MonthStart) + (Model.IsCurrentMonth ? " (month to date)" : "") : null;
+    var change = Model.ChangeFromPrevious;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+}
+
+<partial name="_ReportNav" />
+<partial name="_PrintHeader" />
+
+<div class="dt-page-head rp-noprint">
+    <div>
+        <h1 class="dt-h1 mb-1">Month-end profit</h1>
+        <p class="text-secondary-dt mb-0">Income minus parts cost, salaries and expenses equals net profit.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-dt" data-rp-export="#profit-table" data-filename="month-end-profit" disabled="@(!show)"><i class="bi bi-download me-1"></i>Export CSV</button>
+        <button type="button" class="btn btn-primary" data-rp-print><i class="bi bi-printer me-1"></i>Print</button>
+    </div>
+</div>
+
+@{ ViewData["MonthOptions"] = Model.MonthOptions; }
+<partial name="_ProfitToolbar" model="Model.Filter" />
+
+@if (!valid)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-calendar-x"></i>Choose a month above and press Show profit.</div>
+}
+else if (!Model.HasData)
+{
+    <div class="dt-card rp-empty"><i class="bi bi-inbox"></i>There are no jobs or expenses for @ReportFormat.MonthLong(Model.MonthStart).</div>
+}
+else
+{
+    @if (Model.IsCurrentMonth)
+    {
+        <div class="alert alert-warning dt-alert rp-noprint" role="alert" style="border-color: var(--dt-warning); color: #fff3b0;">
+            <i class="bi bi-info-circle-fill me-2"></i>This month is not finished yet. The figures are month to date and will change.
+        </div>
+    }
+
+    <!-- Income - costs = net profit -->
+    <div class="rp-equation mb-4" role="group" aria-label="Profit calculation">
+        <div class="rp-eq-box is-income"><small>Income</small><strong>@ReportFormat.Lkr(Model.Income)</strong></div>
+        <div class="rp-eq-op">&minus;</div>
+        <div class="rp-eq-box"><small>Parts cost</small><strong>@ReportFormat.Lkr(Model.PartsCost)</strong></div>
+        <div class="rp-eq-op">&minus;</div>
+        <div class="rp-eq-box"><small>Salaries</small><strong>@ReportFormat.Lkr(Model.Salaries)</strong></div>
+        <div class="rp-eq-op">&minus;</div>
+        <div class="rp-eq-box"><small>Expenses</small><strong>@ReportFormat.Lkr(Model.Expenses)</strong></div>
+        <div class="rp-eq-op">=</div>
+        <div class="rp-eq-box is-net @(isProfit ? "is-profit" : "is-loss")">
+            <small>@(isProfit ? "Net profit" : "Net loss")</small>
+            <strong>@ReportFormat.Lkr(Model.NetProfit)</strong>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <section class="dt-card p-4 h-100">
+                <h2 class="dt-h2"><i class="bi bi-bar-chart-steps me-2 text-red"></i>Where the income went</h2>
+                <div class="rp-chart-box"><canvas id="waterfallChart" role="img" aria-label="Income, costs and net profit for the month"></canvas></div>
+            </section>
+        </div>
+        <div class="col-lg-5">
+            <section class="dt-card p-4 h-100">
+                <h2 class="dt-h2"><i class="bi bi-list-check me-2 text-red"></i>Statement for @ReportFormat.MonthLong(Model.MonthStart)</h2>
+                <dl class="rp-breakdown">
+                    <div><dt>Jobs completed</dt><dd>@Model.Jobs</dd></div>
+                    <div><dt>Income (parts + labour)</dt><dd class="rp-up">@ReportFormat.Lkr(Model.Income)</dd></div>
+                    <div><dt>Less: parts cost</dt><dd>@ReportFormat.Lkr(Model.PartsCost)</dd></div>
+                    <div><dt>Less: salaries</dt><dd>@ReportFormat.Lkr(Model.Salaries)</dd></div>
+                    <div><dt>Less: expenses</dt><dd>@ReportFormat.Lkr(Model.Expenses)</dd></div>
+                    <div><dt>Profit margin</dt><dd>@ReportFormat.Percent(Model.MarginPercent)</dd></div>
+                    @if (change.HasValue)
+                    {
+                        <div>
+                            <dt>Change from last month</dt>
+                            <dd class="@(change >= 0 ? "rp-up" : "rp-down")">
+                                <i class="bi @(change >= 0 ? "bi-arrow-up-right" : "bi-arrow-down-right")"></i>@ReportFormat.Lkr(Math.Abs(change.Value))
+                            </dd>
+                        </div>
+                    }
+                    <div class="is-total">
+                        <dt>@(isProfit ? "Net profit" : "Net loss")</dt>
+                        <dd class="@(isProfit ? "rp-up" : "rp-down")">@ReportFormat.Lkr(Model.NetProfit)</dd>
+                    </div>
+                </dl>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <section class="dt-card p-4 h-100">
+                <h2 class="dt-h2"><i class="bi bi-graph-up me-2 text-red"></i>Last 6 months</h2>
+                <div class="rp-chart-box"><canvas id="trendChart" role="img" aria-label="Income, total costs and net profit for the last six months"></canvas></div>
+            </section>
+        </div>
+        <div class="col-lg-5">
+            <section class="dt-card p-4 h-100">
+                <h2 class="dt-h2"><i class="bi bi-receipt me-2 text-red"></i>Expenses by category</h2>
+                <div class="table-responsive">
+                    <table class="table dt-table rp-table align-middle mb-0">
+                        <thead><tr><th>Category</th><th class="num">Bills</th><th class="num">Amount (LKR)</th><th class="num">Share</th></tr></thead>
+                        <tbody>
+                            @foreach (var e in Model.ExpenseRows)
+                            {
+                                <tr>
+                                    <td>@e.Category</td>
+                                    <td class="num">@e.Items</td>
+                                    <td class="num">@ReportFormat.Number(e.Amount)</td>
+                                    <td class="num">@ReportFormat.Percent(e.SharePercent)</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr><td>Total</td><td class="num"></td><td class="num">@ReportFormat.Number(Model.Expenses)</td><td class="num"></td></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Plain table used for the CSV export -->
+    <table id="profit-table" class="d-none" aria-hidden="true">
+        <thead><tr><th>Item</th><th>Amount (LKR)</th></tr></thead>
+        <tbody>
+            <tr><td>Month</td><td data-csv="@ReportFormat.MonthLong(Model.MonthStart)"></td></tr>
+            <tr><td>Jobs completed</td><td data-csv="@Model.Jobs"></td></tr>
+            <tr><td>Income</td><td data-csv="@ReportFormat.Raw(Model.Income)"></td></tr>
+            <tr><td>Parts cost</td><td data-csv="@ReportFormat.Raw(Model.PartsCost)"></td></tr>
+            <tr><td>Salaries</td><td data-csv="@ReportFormat.Raw(Model.Salaries)"></td></tr>
+            <tr><td>Expenses</td><td data-csv="@ReportFormat.Raw(Model.Expenses)"></td></tr>
+            <tr><td>Net profit</td><td data-csv="@ReportFormat.Raw(Model.NetProfit)"></td></tr>
+            @foreach (var e in Model.ExpenseRows)
+            {
+                <tr><td>Expense: @e.Category</td><td data-csv="@ReportFormat.Raw(e.Amount)"></td></tr>
+            }
+        </tbody>
+    </table>
+}
+
+@section Scripts {
+    <partial name="_ReportScripts" />
+    @if (show)
+    {
+        <script>
+            RP.waterfall('waterfallChart', @Json.Serialize(Model.Waterfall));
+            RP.trend('trendChart', @Json.Serialize(Model.Trend));
+        </script>
+    }
+}
