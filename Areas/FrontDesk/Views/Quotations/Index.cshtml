@@ -1,0 +1,122 @@
+@model List<QuotationViewModel>
+@{
+    ViewData["Title"] = "Quotations";
+    var selectedStatus = (string)ViewBag.SelectedStatus;
+    var search = (string)ViewBag.Search;
+    var pendingOwnerCount = (int)ViewBag.PendingOwnerCount;
+    var isOwner = User.IsInRole("Owner");
+}
+
+<div class="dt-page-head">
+    <div>
+        <h1 class="dt-h1 mb-1">Quotations</h1>
+        <p class="text-secondary-dt mb-0">Prepare vehicle repair estimates, submit for Owner review, and convert to job cards.</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn btn-primary btn-lg">
+            <i class="bi bi-plus-circle me-1"></i>New Quotation
+        </a>
+    </div>
+</div>
+
+@if (isOwner && pendingOwnerCount > 0)
+{
+    <div class="alert alert-warning d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 border-0" style="background: rgba(250, 204, 21, 0.15); border-left: 4px solid var(--dt-warning) !important;">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-exclamation-triangle-fill text-warning fs-3 me-3"></i>
+            <div>
+                <strong class="text-white d-block">Action Required by Owner</strong>
+                <span class="text-secondary-dt">There are @pendingOwnerCount quotation(s) waiting for your review and approval.</span>
+            </div>
+        </div>
+        <a asp-action="Index" asp-route-status="Pending Owner Approval" class="btn btn-warning btn-sm fw-bold">View Pending Quotes</a>
+    </div>
+}
+
+<!-- Filters Bar -->
+<div class="dt-card p-3 mb-4">
+    <form method="get" class="row g-2 align-items-center">
+        <div class="col-12 col-md-4">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+                <input type="text" name="search" value="@search" class="form-control" placeholder="Search Quote #, Vehicle, Customer..." />
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <select name="status" class="form-select">
+                <option value="">All Statuses</option>
+                <option value="Draft" selected="@(selectedStatus == "Draft")">Draft</option>
+                <option value="Pending Owner Approval" selected="@(selectedStatus == "Pending Owner Approval")">Pending Owner Approval</option>
+                <option value="Approved by Owner" selected="@(selectedStatus == "Approved by Owner")">Approved by Owner</option>
+                <option value="Revision Requested" selected="@(selectedStatus == "Revision Requested")">Revision Requested</option>
+                <option value="Sent to Customer" selected="@(selectedStatus == "Sent to Customer")">Sent to Customer</option>
+                <option value="Converted" selected="@(selectedStatus == "Converted")">Converted to Job Card</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
+            <a asp-action="Index" class="btn btn-outline-dt">Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- Quotation List -->
+<div class="dt-card">
+    <div class="table-responsive">
+        <table class="table dt-table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Quote #</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Vehicle</th>
+                    <th>Grand Total</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-secondary">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            No quotations found matching your criteria.
+                        </td>
+                    </tr>
+                }
+                @foreach (var q in Model)
+                {
+                    <tr>
+                        <td><strong class="text-white">@q.QuoteNo</strong></td>
+                        <td>@q.DateCreated.ToString("yyyy-MM-dd")</td>
+                        <td>
+                            <div>@q.CustomerName</div>
+                            <small class="text-secondary">@q.CustomerPhone</small>
+                        </td>
+                        <td>
+                            <div><span class="badge bg-secondary">@q.VehicleNo</span></div>
+                            <small class="text-secondary">@q.VehicleModel</small>
+                        </td>
+                        <td><strong>LKR @q.GrandTotal.ToString("N2")</strong></td>
+                        <td>
+                            @if (q.Status == "Draft") { <span class="badge bg-secondary">Draft</span> }
+                            else if (q.Status == "Pending Owner Approval") { <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending Owner</span> }
+                            else if (q.Status == "Approved by Owner") { <span class="badge bg-info text-dark"><i class="bi bi-check me-1"></i>Owner Approved</span> }
+                            else if (q.Status == "Revision Requested") { <span class="badge bg-danger">Revision Needed</span> }
+                            else if (q.Status == "Sent to Customer") { <span class="badge bg-primary">Sent to Customer</span> }
+                            else if (q.Status == "Converted") { <span class="badge bg-success"><i class="bi bi-check2-all me-1"></i>Converted (@q.ConvertedJobCardNo)</span> }
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@q.Id" class="btn btn-sm btn-outline-dt me-1"><i class="bi bi-eye"></i> View</a>
+                            @if (q.Status != "Converted")
+                            {
+                                <a asp-action="Edit" asp-route-id="@q.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
