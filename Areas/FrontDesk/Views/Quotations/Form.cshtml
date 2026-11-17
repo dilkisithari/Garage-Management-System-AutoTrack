@@ -1,0 +1,221 @@
+@model QuotationViewModel
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "New Quotation" : $"Edit Quotation {Model.QuoteNo}";
+}
+
+<div class="dt-page-head">
+    <div>
+        <a asp-action="Index" class="btn btn-link text-secondary p-0 mb-2"><i class="bi bi-arrow-left"></i> Back to Quotations</a>
+        <h1 class="dt-h1 mb-1">@(isNew ? "New Quotation" : $"Edit Quotation {Model.QuoteNo}")</h1>
+        <p class="text-secondary-dt mb-0">Build estimated vehicle repairs, dynamic replacement parts, and labor charges.</p>
+    </div>
+</div>
+
+<form asp-action="@(isNew ? "Create" : "Edit")" method="post" id="quotation-form">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="QuoteNo" />
+    <input type="hidden" asp-for="Status" />
+
+    <div class="row g-4">
+        <!-- Customer & Vehicle Card -->
+        <div class="col-12 col-xl-8">
+            <div class="dt-card p-4 mb-4">
+                <h4 class="text-white mb-3"><i class="bi bi-person-badge me-2 text-danger"></i>Customer & Vehicle Information</h4>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="CustomerName" class="form-label"></label>
+                        <input asp-for="CustomerName" class="form-control" placeholder="e.g. Kasun Silva" />
+                        <span asp-validation-for="CustomerName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="CustomerPhone" class="form-label"></label>
+                        <input asp-for="CustomerPhone" class="form-control" placeholder="e.g. 0771234567" />
+                        <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="CustomerEmail" class="form-label"></label>
+                        <input asp-for="CustomerEmail" class="form-control" placeholder="customer@email.com" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="VehicleNo" class="form-label"></label>
+                        <input asp-for="VehicleNo" class="form-control" placeholder="e.g. CAB-1234" />
+                        <span asp-validation-for="VehicleNo" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="VehicleModel" class="form-label"></label>
+                        <input asp-for="VehicleModel" class="form-control" placeholder="e.g. Toyota Prius 2018" />
+                        <span asp-validation-for="VehicleModel" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Mileage" class="form-label"></label>
+                        <input asp-for="Mileage" class="form-control" placeholder="e.g. 75000" />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="CustomerRequest" class="form-label"></label>
+                        <textarea asp-for="CustomerRequest" class="form-control" rows="2" placeholder="Describe the customer complaint or requested modification..."></textarea>
+                        <span asp-validation-for="CustomerRequest" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spare Parts Line Items -->
+            <div class="dt-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-white mb-0"><i class="bi bi-gear-fill me-2 text-danger"></i>Required Spare Parts</h4>
+                    <button type="button" class="btn btn-outline-dt btn-sm" data-add-row="parts"><i class="bi bi-plus me-1"></i>Add Part</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dt-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 45%;">Part Name / Description</th>
+                                <th style="width: 15%;">Qty</th>
+                                <th style="width: 20%;">Unit Price (LKR)</th>
+                                <th style="width: 15%;">Total (LKR)</th>
+                                <th style="width: 5%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody data-rows="parts">
+                            @for (var i = 0; i < Model.Parts.Count; i++)
+                            {
+                                <tr class="quote-row">
+                                    <td><input name="Parts[@i].PartName" value="@Model.Parts[i].PartName" class="form-control" placeholder="Part description" /></td>
+                                    <td><input type="number" name="Parts[@i].Quantity" value="@Model.Parts[i].Quantity" min="1" class="form-control js-qty" /></td>
+                                    <td><input type="number" step="0.01" name="Parts[@i].UnitPrice" value="@Model.Parts[i].UnitPrice" class="form-control js-price" /></td>
+                                    <td><span class="js-line-total text-white">@Model.Parts[i].LineTotal.ToString("N2")</span></td>
+                                    <td><button type="button" class="btn btn-outline-danger btn-sm border-0" data-remove-row><i class="bi bi-trash"></i></button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Labour Line Items -->
+            <div class="dt-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-white mb-0"><i class="bi bi-wrench-adjustable me-2 text-danger"></i>Labour & Service Work</h4>
+                    <button type="button" class="btn btn-outline-dt btn-sm" data-add-row="labour"><i class="bi bi-plus me-1"></i>Add Labour</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dt-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 45%;">Service Task Description</th>
+                                <th style="width: 15%;">Hours</th>
+                                <th style="width: 20%;">Hourly Rate (LKR)</th>
+                                <th style="width: 15%;">Total (LKR)</th>
+                                <th style="width: 5%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody data-rows="labour">
+                            @for (var i = 0; i < Model.Labour.Count; i++)
+                            {
+                                <tr class="quote-row">
+                                    <td><input name="Labour[@i].Description" value="@Model.Labour[i].Description" class="form-control" placeholder="e.g. Brake pad replacement" /></td>
+                                    <td><input type="number" step="0.1" name="Labour[@i].Hours" value="@Model.Labour[i].Hours" class="form-control js-hours" /></td>
+                                    <td><input type="number" step="0.01" name="Labour[@i].Rate" value="@Model.Labour[i].Rate" class="form-control js-rate" /></td>
+                                    <td><span class="js-line-total text-white">@Model.Labour[i].LineTotal.ToString("N2")</span></td>
+                                    <td><button type="button" class="btn btn-outline-danger btn-sm border-0" data-remove-row><i class="bi bi-trash"></i></button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Summary & Actions -->
+        <div class="col-12 col-xl-4">
+            <div class="dt-card p-4 mb-4">
+                <h4 class="text-white mb-3">Pricing Summary</h4>
+                <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                    <span class="text-secondary">Parts Subtotal:</span>
+                    <strong class="text-white" id="display-parts-subtotal">LKR 0.00</strong>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                    <span class="text-secondary">Labour Subtotal:</span>
+                    <strong class="text-white" id="display-labour-subtotal">LKR 0.00</strong>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                    <span class="text-secondary">Net Subtotal:</span>
+                    <strong class="text-white" id="display-net-subtotal">LKR 0.00</strong>
+                </div>
+
+                <div class="py-3 border-bottom border-secondary">
+                    <label asp-for="DiscountPercent" class="form-label text-secondary small"></label>
+                    <div class="input-group">
+                        <input asp-for="DiscountPercent" type="number" min="0" max="100" class="form-control" id="input-discount" />
+                        <span class="input-group-text bg-dark border-secondary text-secondary">%</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1 text-danger small">
+                        <span>Discount savings:</span>
+                        <strong id="display-discount-amount">- LKR 0.00</strong>
+                    </div>
+                </div>
+
+                <div class="py-3 border-bottom border-secondary">
+                    <div class="form-check form-switch">
+                        <input asp-for="IncludeVat" class="form-check-input" type="checkbox" id="input-vat" />
+                        <label class="form-check-label text-white" for="input-vat">Add 18% VAT</label>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1 text-secondary small">
+                        <span>VAT Amount:</span>
+                        <strong class="text-white" id="display-vat-amount">LKR 0.00</strong>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center py-3 mb-4">
+                    <span class="fs-5 text-white">Estimated Total:</span>
+                    <strong class="fs-3 text-danger" id="display-grand-total">LKR 0.00</strong>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save me-1"></i>Save Quotation</button>
+                    <a asp-action="Index" class="btn btn-outline-dt">Cancel</a>
+                </div>
+            </div>
+
+            <!-- Validity & Notes -->
+            <div class="dt-card p-4">
+                <h5 class="text-white mb-3">Validity & Terms</h5>
+                <div class="mb-3">
+                    <label asp-for="ExpiryDate" class="form-label text-secondary"></label>
+                    <input asp-for="ExpiryDate" class="form-control" type="date" />
+                </div>
+                <div class="mb-0">
+                    <label asp-for="Notes" class="form-label text-secondary"></label>
+                    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Warranty details or terms..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Row Templates -->
+<template id="tpl-parts">
+    <tr class="quote-row">
+        <td><input name="Parts[__INDEX__].PartName" class="form-control" placeholder="Part description" /></td>
+        <td><input type="number" name="Parts[__INDEX__].Quantity" value="1" min="1" class="form-control js-qty" /></td>
+        <td><input type="number" step="0.01" name="Parts[__INDEX__].UnitPrice" value="0" class="form-control js-price" /></td>
+        <td><span class="js-line-total text-white">0.00</span></td>
+        <td><button type="button" class="btn btn-outline-danger btn-sm border-0" data-remove-row><i class="bi bi-trash"></i></button></td>
+    </tr>
+</template>
+
+<template id="tpl-labour">
+    <tr class="quote-row">
+        <td><input name="Labour[__INDEX__].Description" class="form-control" placeholder="Service description" /></td>
+        <td><input type="number" step="0.1" name="Labour[__INDEX__].Hours" value="1" class="form-control js-hours" /></td>
+        <td><input type="number" step="0.01" name="Labour[__INDEX__].Rate" value="2500" class="form-control js-rate" /></td>
+        <td><span class="js-line-total text-white">0.00</span></td>
+        <td><button type="button" class="btn btn-outline-danger btn-sm border-0" data-remove-row><i class="bi bi-trash"></i></button></td>
+    </tr>
+</template>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/quotation-form.js" asp-append-version="true"></script>
+}
