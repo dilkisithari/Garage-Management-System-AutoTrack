@@ -39,11 +39,19 @@
 
                              <li class="nav-item">
                                  <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Quotations" ? "active" : "")" asp-area="FrontDesk" asp-controller="Quotations" asp-action="Index">Quotations</a>
-                                 </li>
+                             </li>
 
-                                 <li class="nav-item">
-                                     <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "JobCards" ? "active" : "")" asp-area="FrontDesk" asp-controller="JobCards" asp-action="Board">Job cards</a>
-                                     </li>
+                             <li class="nav-item">
+                                 <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "JobCards" ? "active" : "")" asp-area="FrontDesk" asp-controller="JobCards" asp-action="Board">Job cards</a>
+                             </li>
+
+                             <li class="nav-item">
+                                 <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Invoices" ? "active" : "")" asp-area="FrontDesk" asp-controller="Invoices" asp-action="Index">Invoices</a>
+                             </li>
+
+                             <li class="nav-item">
+                                 <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Suppliers" ? "active" : "")" asp-area="FrontDesk" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+                             </li>
                                      
 
 
