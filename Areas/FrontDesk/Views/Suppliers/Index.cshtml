@@ -1,0 +1,150 @@
+@model List<SupplierViewModel>
+@{
+    ViewData["Title"] = "Suppliers";
+    var search = (string)ViewBag.Search;
+    var status = (string)ViewBag.Status;
+}
+
+<div class="dt-page-head d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-truck me-2 text-red"></i>Parts Suppliers</h1>
+        <p class="text-secondary-dt mb-0">
+            @ViewBag.ActiveCount active suppliers &middot; @ViewBag.TotalCount registered partners
+        </p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add supplier</a>
+</div>
+
+<!-- Search & Filter Toolbar -->
+<div class="dt-card dt-toolbar mb-4 p-3">
+    <form method="get" asp-action="Index" class="row g-2 align-items-center">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+                <input name="search" type="search" value="@search" class="form-control" placeholder="Search by name, parts supplied, contact person or phone..." />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select name="status" class="form-select" onchange="this.form.submit()">
+                <option value="">All statuses</option>
+                <option value="active" selected="@(status == "active")">Active only</option>
+                <option value="inactive" selected="@(status == "inactive")">Inactive only</option>
+            </select>
+        </div>
+        <div class="col-md-2 text-md-end">
+            <a asp-action="Index" class="btn btn-outline-dt w-100">
+                <i class="bi bi-x-circle me-1"></i>Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Supplier List -->
+@if (Model.Count == 0)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-inbox fs-1 text-secondary mb-3 d-block"></i>
+        <h4 class="text-white">No suppliers found</h4>
+        <p class="text-secondary-dt mb-3">Try adjusting your search query or add a new supplier.</p>
+        <a asp-action="Create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add supplier</a>
+    </div>
+}
+else
+{
+    <div class="dt-card p-0 overflow-hidden mb-4">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead class="table-dark text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Supplier Name</th>
+                        <th>Contact Info</th>
+                        <th>Address</th>
+                        <th>Parts Supplied</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-white fs-6">@s.Name</div>
+                                @if (!string.IsNullOrEmpty(s.ContactPerson))
+                                {
+                                    <small class="text-secondary-dt"><i class="bi bi-person me-1"></i>@s.ContactPerson</small>
+                                }
+                            </td>
+                            <td>
+                                <div><a href="tel:@s.Phone" class="text-white text-decoration-none"><i class="bi bi-telephone me-1 text-red"></i>@s.Phone</a></div>
+                                @if (!string.IsNullOrEmpty(s.Email))
+                                {
+                                    <div><a href="mailto:@s.Email" class="text-secondary small text-decoration-none"><i class="bi bi-envelope me-1"></i>@s.Email</a></div>
+                                }
+                            </td>
+                            <td>
+                                <span class="text-secondary small">@(s.Address ?? "—")</span>
+                            </td>
+                            <td style="max-width: 320px;">
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var part in s.PartsList)
+                                    {
+                                        <span class="badge bg-secondary text-light fw-normal py-1 px-2">@part</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                @if (s.IsActive)
+                                {
+                                    <span class="badge bg-success text-dark"><i class="bi bi-check-circle-fill me-1"></i>Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary text-dark"><i class="bi bi-dash-circle me-1"></i>Inactive</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-outline-dt" title="Edit supplier">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form asp-action="ToggleActive" asp-route-id="@s.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-secondary" title="@(s.IsActive ? "Mark Inactive" : "Mark Active")">
+                                            <i class="bi @(s.IsActive ? "bi-eye-slash" : "bi-eye")"></i>
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-@s.Id" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade text-start" id="deleteModal-@s.Id" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content bg-dark border-secondary text-white">
+                                            <div class="modal-header border-secondary">
+                                                <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Delete Supplier</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete <strong>@s.Name</strong>? This action cannot be undone.
+                                            </div>
+                                            <div class="modal-footer border-secondary">
+                                                <button type="button" class="btn btn-outline-dt" data-bs-dismiss="modal">Cancel</button>
+                                                <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

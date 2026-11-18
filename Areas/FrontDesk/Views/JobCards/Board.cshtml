@@ -17,7 +17,10 @@
         <h1 class="dt-h1 mb-1">Job cards</h1>
         <p class="text-secondary-dt mb-0">@Model.Count jobs in the workshop</p>
     </div>
-    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New job card</a>
+    <div class="d-flex gap-2">
+        <a asp-area="FrontDesk" asp-controller="Invoices" asp-action="Index" class="btn btn-outline-dt"><i class="bi bi-receipt me-1"></i>Invoices</a>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New job card</a>
+    </div>
 </div>
 
 <div class="dt-card dt-toolbar mb-4">

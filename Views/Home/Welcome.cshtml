@@ -1,4 +1,4 @@
-﻿@using System.Security.Claims
+@using System.Security.Claims
 @{
     ViewData["Title"] = "Welcome";
     var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
@@ -33,6 +33,18 @@
             <a class="dt-quick" asp-area="FrontDesk" asp-controller="JobCards" asp-action="Create">
                 <i class="bi bi-plus-circle"></i>
                 <div><strong>New job card</strong><span>Open a job for a vehicle</span></div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="FrontDesk" asp-controller="Invoices" asp-action="Index">
+                <i class="bi bi-receipt"></i>
+                <div><strong>Invoices & Payments</strong><span>Customer billing, print invoices & payments</span></div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="FrontDesk" asp-controller="Suppliers" asp-action="Index">
+                <i class="bi bi-truck"></i>
+                <div><strong>Parts Suppliers</strong><span>Vendor directory & parts supplied list</span></div>
             </a>
         </div>
     </div>

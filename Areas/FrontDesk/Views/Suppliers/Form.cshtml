@@ -1,0 +1,113 @@
+@model SupplierViewModel
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Add supplier" : $"Edit {Model.Name}";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <a asp-action="Index" class="dt-back text-secondary-dt text-decoration-none mb-2 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i>Back to suppliers
+        </a>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-truck me-2 text-red"></i>@(isNew ? "Add New Supplier" : "Edit Supplier")</h1>
+        <p class="text-secondary-dt mb-0">
+            @(isNew ? "Register a new spare parts vendor or automotive service provider." : $"Update vendor information for {Model.Name}")
+        </p>
+    </div>
+</div>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id.ToString())" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CreatedDate" />
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert mb-4"></div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- Supplier Profile Section -->
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-building me-2 text-red"></i>Supplier Details</h2>
+
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label asp-for="Name" class="form-label">Supplier / Company Name <span class="text-danger">*</span></label>
+                        <input asp-for="Name" class="form-control" placeholder="e.g. Ceylon Lubricants & Fluids Ltd" />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label asp-for="ContactPerson" class="form-label">Contact Person</label>
+                        <input asp-for="ContactPerson" class="form-control" placeholder="e.g. Sanjeewa Dissanayake" />
+                        <span asp-validation-for="ContactPerson" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-telephone"></i></span>
+                            <input asp-for="Phone" class="form-control" placeholder="e.g. +94 11 287 4100" />
+                        </div>
+                        <span asp-validation-for="Phone" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-envelope"></i></span>
+                            <input asp-for="Email" class="form-control" placeholder="e.g. sales@vendor.lk" />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="Address" class="form-label">Physical Address</label>
+                        <input asp-for="Address" class="form-control" placeholder="e.g. 45 Nawala Road, Rajagiriya, Colombo" />
+                        <span asp-validation-for="Address" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="PartsSupplied" class="form-label">Parts / Items Supplied <span class="text-danger">*</span></label>
+                        <textarea asp-for="PartsSupplied" class="form-control" rows="3" placeholder="Enter comma-separated items e.g. Engine oil 5W-30, Oil filters, Air filters, Brake pads"></textarea>
+                        <span asp-validation-for="PartsSupplied" class="text-danger small"></span>
+                        <div class="form-text text-secondary-dt">Separate parts or categories with commas for quick tag rendering.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notes Section -->
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-card-text me-2 text-red"></i>Internal Notes & Delivery Terms</h2>
+                <div>
+                    <label asp-for="Notes" class="form-label">Notes</label>
+                    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="e.g. Payment terms (30 days credit), direct dispatch contact, discount arrangements..."></textarea>
+                    <span asp-validation-for="Notes" class="text-danger small"></span>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Settings Card -->
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-toggles me-2 text-red"></i>Status</h2>
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" id="isActiveSwitch" />
+                    <label class="form-check-label text-white" for="isActiveSwitch">Active Supplier</label>
+                </div>
+                <p class="text-secondary-dt small mb-0">Inactive suppliers are hidden from daily ordering shortcuts but kept in records.</p>
+            </section>
+
+            <!-- Action buttons -->
+            <section class="dt-card p-4">
+                <button type="submit" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-check-lg me-1"></i>@(isNew ? "Save Supplier" : "Save Changes")
+                </button>
+                <a asp-action="Index" class="btn btn-outline-dt w-100">Cancel</a>
+            </section>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
