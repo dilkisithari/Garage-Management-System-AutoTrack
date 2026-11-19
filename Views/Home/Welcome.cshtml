@@ -47,6 +47,36 @@
                 <div><strong>Parts Suppliers</strong><span>Vendor directory & parts supplied list</span></div>
             </a>
         </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="FrontDesk" asp-controller="Appointments" asp-action="Index">
+                <i class="bi bi-calendar-check"></i>
+                <div><strong>Appointments</strong><span>Confirm, reschedule & view requests</span></div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="FrontDesk" asp-controller="Appointments" asp-action="Calendar">
+                <i class="bi bi-calendar3"></i>
+                <div><strong>Calendar View</strong><span>Day & week view of booked slots</span></div>
+            </a>
+        </div>
+    </div>
+}
+
+@if (role == "Customer")
+{
+    <div class="row g-3">
+        <div class="col-md-6 col-xl-6">
+            <a class="dt-quick" asp-area="" asp-controller="Appointments" asp-action="Book">
+                <i class="bi bi-calendar-plus"></i>
+                <div><strong>Book an Appointment</strong><span>Pick a vehicle, service type, date & time slot</span></div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-6">
+            <a class="dt-quick" asp-area="" asp-controller="Appointments" asp-action="My">
+                <i class="bi bi-calendar2-check"></i>
+                <div><strong>My Appointments</strong><span>Track your scheduled service bookings</span></div>
+            </a>
+        </div>
     </div>
 }
 

@@ -1,0 +1,349 @@
+@model AppointmentCalendarViewModel
+@{
+    ViewData["Title"] = "Appointments Calendar";
+    var isDay = Model.ViewMode == "day";
+    var prevDate = isDay ? Model.SelectedDate.AddDays(-1) : Model.WeekStartDate.AddDays(-7);
+    var nextDate = isDay ? Model.SelectedDate.AddDays(1) : Model.WeekStartDate.AddDays(7);
+    var todayStr = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="dt-page-head d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-calendar3 me-2 text-red"></i>Schedule Calendar</h1>
+        <p class="text-secondary-dt mb-0">
+            @if (isDay)
+            {
+                <span>Viewing Day Schedule: <strong class="text-white">@Model.SelectedDate.ToString("dddd, MMMM dd, yyyy")</strong></span>
+            }
+            else
+            {
+                <span>Viewing Week Schedule: <strong class="text-white">@Model.WeekStartDate.ToString("MMM dd") &ndash; @Model.WeekEndDate.ToString("MMM dd, yyyy")</strong></span>
+            }
+        </p>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <!-- Day / Week Switcher -->
+        <div class="btn-group p-1 bg-dark border border-secondary rounded-pill" role="group">
+            <a asp-action="Calendar" asp-route-view="day" asp-route-date="@Model.SelectedDate.ToString("yyyy-MM-dd")"
+               class="btn btn-sm rounded-pill @(isDay ? "btn-danger text-white" : "text-secondary-dt")">
+                <i class="bi bi-calendar-day me-1"></i>Day View
+            </a>
+            <a asp-action="Calendar" asp-route-view="week" asp-route-date="@Model.SelectedDate.ToString("yyyy-MM-dd")"
+               class="btn btn-sm rounded-pill @(!isDay ? "btn-danger text-white" : "text-secondary-dt")">
+                <i class="bi bi-calendar-week me-1"></i>Week View
+            </a>
+        </div>
+
+        <a asp-action="Index" class="btn btn-outline-dt">
+            <i class="bi bi-table me-1"></i>List View
+        </a>
+        <a asp-area="" asp-controller="Appointments" asp-action="Book" class="btn btn-primary" target="_blank">
+            <i class="bi bi-plus-lg me-1"></i>New Booking
+        </a>
+    </div>
+</div>
+
+<!-- Calendar Navigation Bar -->
+<div class="dt-card p-3 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Calendar" asp-route-view="@Model.ViewMode" asp-route-date="@prevDate.ToString("yyyy-MM-dd")" class="btn btn-outline-dt btn-sm">
+            <i class="bi bi-chevron-left me-1"></i>Previous @(isDay ? "Day" : "Week")
+        </a>
+        <a asp-action="Calendar" asp-route-view="@Model.ViewMode" asp-route-date="@todayStr" class="btn btn-outline-dt btn-sm">
+            Today
+        </a>
+        <a asp-action="Calendar" asp-route-view="@Model.ViewMode" asp-route-date="@nextDate.ToString("yyyy-MM-dd")" class="btn btn-outline-dt btn-sm">
+            Next @(isDay ? "Day" : "Week")<i class="bi bi-chevron-right ms-1"></i>
+        </a>
+    </div>
+
+    <!-- Date Jump Form -->
+    <form method="get" asp-action="Calendar" class="d-flex align-items-center gap-2 m-0">
+        <input type="hidden" name="view" value="@Model.ViewMode" />
+        <label class="form-label small text-secondary-dt mb-0 text-nowrap">Jump to date:</label>
+        <input type="date" name="date" value="@Model.SelectedDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" style="width: 170px;" onchange="this.form.submit()" />
+    </form>
+</div>
+
+<!-- Legend -->
+<div class="d-flex flex-wrap align-items-center gap-4 mb-3 px-2 small">
+    <div class="d-flex align-items-center gap-2">
+        <span class="legend-box legend-booked"></span>
+        <span class="text-secondary-dt"><strong>Greyed Out:</strong> Booked Slot (Not Selectable)</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="legend-box legend-available"></span>
+        <span class="text-secondary-dt">Available Slot</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-success text-dark">Confirmed</span>
+        <span class="text-secondary-dt">Front Desk Confirmed</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-warning text-dark">Pending</span>
+        <span class="text-secondary-dt">Awaiting Review</span>
+    </div>
+</div>
+
+@if (isDay)
+{
+    <!-- ==================== DAY VIEW ==================== -->
+    <div class="dt-card p-4">
+        <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-4">
+            <h3 class="dt-h2 text-white mb-0">
+                <i class="bi bi-clock-history text-red me-2"></i>Hourly Schedule &bull; @Model.SelectedDate.ToString("dddd, MMMM dd, yyyy")
+            </h3>
+            <span class="badge bg-dark border border-secondary text-secondary">@Model.TimeSlots.Count Time Slots</span>
+        </div>
+
+        <div class="d-flex flex-column gap-3">
+            @foreach (var slot in Model.TimeSlots)
+            {
+                var lookupKey = $"{Model.SelectedDate:yyyy-MM-dd}|{slot.Trim()}";
+                var isBooked = Model.BookedSlotsLookup.TryGetValue(lookupKey, out var appt);
+
+                if (isBooked && appt != null)
+                {
+                    <!-- GREYED OUT BOOKED SLOT - NOT SELECTABLE -->
+                    <div class="dt-slot-booked p-3 rounded-3 border d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"
+                         aria-disabled="true"
+                         title="Booked slot - Not selectable">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="p-2 rounded bg-black border border-secondary text-center" style="min-width: 140px;">
+                                <i class="bi bi-clock text-secondary d-block mb-1"></i>
+                                <span class="fw-bold small text-secondary text-decoration-line-through">@slot</span>
+                            </div>
+                            <div>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                    <span class="badge bg-secondary text-dark"><i class="bi bi-lock-fill me-1"></i>Booked &bull; Not Selectable</span>
+                                    <span class="badge bg-danger">@appt.VehicleNo</span>
+                                    @if (appt.Status == "Confirmed")
+                                    {
+                                        <span class="badge bg-success text-dark"><i class="bi bi-check-circle-fill me-1"></i>Confirmed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Pending</span>
+                                    }
+                                    <span class="text-secondary small font-monospace">@appt.AppointmentNo</span>
+                                </div>
+                                <h5 class="text-secondary mb-1">@appt.CustomerName <small class="text-secondary">(@appt.CustomerPhone)</small></h5>
+                                <div class="text-secondary small">
+                                    <strong class="text-secondary">Service:</strong> @appt.ServiceType
+                                    @if (!string.IsNullOrWhiteSpace(appt.VehicleModel))
+                                    {
+                                        <span class="ms-2 text-secondary">&bull; @appt.VehicleModel</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(appt.Notes))
+                                {
+                                    <div class="text-secondary small fst-italic mt-1 text-truncate" style="max-width: 500px;">
+                                        "@appt.Notes"
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="text-md-end">
+                            <span class="badge bg-black border border-secondary text-secondary py-2 px-3">
+                                <i class="bi bi-slash-circle me-1"></i>Slot Unavailable
+                            </span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <!-- AVAILABLE SLOT -->
+                    <div class="dt-slot-available p-3 rounded-3 border d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="p-2 rounded bg-dark border border-secondary text-center" style="min-width: 140px;">
+                                <i class="bi bi-clock text-success d-block mb-1"></i>
+                                <span class="fw-bold small text-white">@slot</span>
+                            </div>
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        <i class="bi bi-check-circle me-1"></i>Available
+                                    </span>
+                                </div>
+                                <h5 class="text-white mb-0">Open Service Slot</h5>
+                                <small class="text-secondary-dt">No appointment scheduled for this time</small>
+                            </div>
+                        </div>
+
+                        <div>
+                            <a asp-area="" asp-controller="Appointments" asp-action="Book" asp-route-date="@Model.SelectedDate.ToString("yyyy-MM-dd")" asp-route-slot="@slot" class="btn btn-outline-dt btn-sm">
+                                <i class="bi bi-plus-circle me-1"></i>Book this slot
+                            </a>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+else
+{
+    <!-- ==================== WEEK VIEW ==================== -->
+    <div class="dt-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-dark table-bordered mb-0 align-middle dt-calendar-table">
+                <thead>
+                    <tr>
+                        <th class="text-center bg-black border-secondary py-3 text-secondary" style="width: 130px;">
+                            <i class="bi bi-clock me-1"></i>Time Slot
+                        </th>
+                        @foreach (var day in Model.WeekDays)
+                        {
+                            var isCurrentToday = day.Date == DateTime.Today;
+                            <th class="text-center border-secondary py-3 @(isCurrentToday ? "bg-dark border-danger border-2" : "bg-black")" style="min-width: 150px;">
+                                <div class="small text-uppercase fw-semibold @(isCurrentToday ? "text-red" : "text-secondary")">@day.ToString("ddd")</div>
+                                <div class="fs-5 fw-bold @(isCurrentToday ? "text-red" : "text-white")">@day.ToString("MMM dd")</div>
+                                @if (isCurrentToday)
+                                {
+                                    <span class="badge bg-danger-subtle text-danger small">Today</span>
+                                }
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var slot in Model.TimeSlots)
+                    {
+                        <tr>
+                            <!-- Slot label column -->
+                            <td class="text-center bg-black border-secondary fw-semibold text-secondary small py-3">
+                                @slot
+                            </td>
+
+                            <!-- 7 day columns -->
+                            @foreach (var day in Model.WeekDays)
+                            {
+                                var lookupKey = $"{day:yyyy-MM-dd}|{slot.Trim()}";
+                                var isBooked = Model.BookedSlotsLookup.TryGetValue(lookupKey, out var appt);
+
+                                if (isBooked && appt != null)
+                                {
+                                    <!-- GREYED OUT BOOKED SLOT - NOT SELECTABLE -->
+                                    <td class="cal-cell-booked p-2 border-secondary"
+                                        aria-disabled="true"
+                                        title="Booked slot: @appt.CustomerName (@appt.VehicleNo) - Not selectable">
+                                        <div class="p-2 rounded bg-black bg-opacity-75 border border-secondary text-start cal-booked-content">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="badge bg-secondary text-dark px-1"><i class="bi bi-lock-fill"></i> Booked</span>
+                                                @if (appt.Status == "Confirmed")
+                                                {
+                                                    <span class="badge bg-success text-dark">Confirmed</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">Pending</span>
+                                                }
+                                            </div>
+                                            <div class="badge bg-danger d-inline-block mb-1">@appt.VehicleNo</div>
+                                            <div class="small fw-semibold text-secondary text-truncate" title="@appt.CustomerName">@appt.CustomerName</div>
+                                            <div class="small text-secondary text-truncate" title="@appt.ServiceType">@appt.ServiceType</div>
+                                        </div>
+                                    </td>
+                                }
+                                else
+                                {
+                                    <!-- AVAILABLE SLOT -->
+                                    <td class="cal-cell-available p-2 border-secondary text-center">
+                                        <div class="p-2 rounded border border-dashed border-secondary cal-available-content">
+                                            <span class="badge bg-success-subtle text-success small mb-1">
+                                                <i class="bi bi-check-circle me-1"></i>Available
+                                            </span>
+                                            <div>
+                                                <a asp-area="" asp-controller="Appointments" asp-action="Book" asp-route-date="@day.ToString("yyyy-MM-dd")" asp-route-slot="@slot" class="btn btn-outline-dt btn-sm p-1 px-2 mt-1 small" style="font-size: 0.75rem;">
+                                                    <i class="bi bi-plus"></i> Book
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                }
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section Styles {
+    <style>
+        .legend-box {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            vertical-align: middle;
+        }
+        .legend-booked {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+        }
+        .legend-available {
+            background-color: var(--dt-gray-900);
+            border: 1px dashed var(--dt-success);
+        }
+
+        /* DAY VIEW STYLES */
+        .dt-slot-available {
+            background-color: var(--dt-gray-900);
+            border-color: var(--dt-gray-700) !important;
+            transition: all 0.2s ease;
+        }
+        .dt-slot-available:hover {
+            border-color: var(--dt-success) !important;
+        }
+
+        /* GREYED OUT BOOKED SLOTS - DAY VIEW */
+        .dt-slot-booked {
+            background-color: #141414 !important;
+            border-color: #2b2b2b !important;
+            color: #6c757d !important;
+            opacity: 0.65;
+            cursor: not-allowed !important;
+            user-select: none;
+            filter: grayscale(0.85);
+        }
+        .dt-slot-booked * {
+            pointer-events: none !important;
+        }
+
+        /* WEEK VIEW STYLES */
+        .dt-calendar-table th, .dt-calendar-table td {
+            vertical-align: middle;
+        }
+        .cal-cell-available {
+            background-color: rgba(30, 30, 30, 0.4);
+            transition: background-color 0.2s;
+        }
+        .cal-cell-available:hover {
+            background-color: rgba(34, 197, 94, 0.05);
+        }
+        .cal-available-content {
+            border-style: dashed !important;
+        }
+
+        /* GREYED OUT BOOKED SLOTS - WEEK VIEW */
+        .cal-cell-booked {
+            background-color: #121212 !important;
+            opacity: 0.60;
+            cursor: not-allowed !important;
+            user-select: none;
+        }
+        .cal-booked-content {
+            background-color: #191919 !important;
+            border-color: #2e2e2e !important;
+            filter: grayscale(1);
+        }
+        .cal-cell-booked * {
+            pointer-events: none !important;
+        }
+    </style>
+}
+

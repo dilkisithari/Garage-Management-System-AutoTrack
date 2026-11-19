@@ -1,0 +1,341 @@
+@model AppointmentBookingViewModel
+@{
+    ViewData["Title"] = "Book Service Appointment";
+    var minDate = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>D Tech Motors AutoTrack</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-calendar2-check text-red me-2"></i>Book a Service Appointment</h1>
+        <p class="text-secondary-dt mb-0">Select your vehicle, service requirements, date, and preferred time slot.</p>
+    </div>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a asp-action="My" class="btn btn-outline-dt">
+            <i class="bi bi-clock-history me-1"></i>My Bookings
+        </a>
+    }
+</div>
+
+<form asp-action="Book" method="post" id="appointmentBookingForm">
+    @Html.AntiForgeryToken()
+
+    <div class="row g-4">
+        <!-- Left Column: Booking Form -->
+        <div class="col-lg-8">
+            <div class="dt-card p-4 mb-4">
+                <h4 class="dt-h2 text-white mb-3 d-flex align-items-center">
+                    <span class="badge bg-danger rounded-circle p-2 me-2 fs-6">1</span>
+                    Vehicle Details
+                </h4>
+
+                @if (Model.ExistingVehicles.Count > 0)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Select Registered Vehicle</label>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            @foreach (var v in Model.ExistingVehicles)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-dt vehicle-quick-btn @(Model.VehicleNo == v ? "active btn-danger text-white border-danger" : "")" data-veh="@v">
+                                    <i class="bi bi-car-front-fill me-1"></i>@v
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="VehicleNo" class="form-label">Vehicle Registration No. <span class="text-red">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                            <input asp-for="VehicleNo" class="form-control text-uppercase" placeholder="e.g. CAB-1234, WP CAD-7788" id="VehicleNoInput" required />
+                        </div>
+                        <span asp-validation-for="VehicleNo" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="VehicleModel" class="form-label">Vehicle Make & Model</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-car-front"></i></span>
+                            <input asp-for="VehicleModel" class="form-control" placeholder="e.g. Toyota Prius, Honda Vezel" id="VehicleModelInput" />
+                        </div>
+                        <span asp-validation-for="VehicleModel" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Selection -->
+            <div class="dt-card p-4 mb-4">
+                <h4 class="dt-h2 text-white mb-3 d-flex align-items-center">
+                    <span class="badge bg-danger rounded-circle p-2 me-2 fs-6">2</span>
+                    Service Type
+                </h4>
+
+                <div class="mb-3">
+                    <label asp-for="ServiceType" class="form-label">Choose Required Service <span class="text-red">*</span></label>
+                    <select asp-for="ServiceType" class="form-select form-select-lg" required>
+                        <option value="">-- Select Service Type --</option>
+                        @foreach (var service in Model.AvailableServiceTypes)
+                        {
+                            <option value="@service" selected="@(Model.ServiceType == service)">@service</option>
+                        }
+                    </select>
+                    <span asp-validation-for="ServiceType" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <!-- Date & Time Slot Selection -->
+            <div class="dt-card p-4 mb-4">
+                <h4 class="dt-h2 text-white mb-3 d-flex align-items-center">
+                    <span class="badge bg-danger rounded-circle p-2 me-2 fs-6">3</span>
+                    Date & Time Slot
+                </h4>
+
+                <div class="mb-4">
+                    <label asp-for="AppointmentDate" class="form-label">Preferred Date <span class="text-red">*</span></label>
+                    <div class="input-group" style="max-width: 320px;">
+                        <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+                        <input asp-for="AppointmentDate" type="date" min="@minDate" class="form-control" id="appointmentDateInput" required />
+                    </div>
+                    <span asp-validation-for="AppointmentDate" class="text-danger small"></span>
+                    <small class="text-secondary-dt d-block mt-1">Slots update automatically when changing the date.</small>
+                </div>
+
+                <label class="form-label mb-2">Select an Available Time Slot <span class="text-red">*</span></label>
+                <input type="hidden" asp-for="TimeSlot" id="selectedTimeSlotInput" required />
+                <span asp-validation-for="TimeSlot" class="text-danger small d-block mb-2"></span>
+
+                <!-- Slot Selection Grid -->
+                <div class="row g-2" id="timeSlotsContainer">
+                    @foreach (var slot in Model.AllTimeSlots)
+                    {
+                        var isBooked = Model.BookedSlotsForDate.Contains(slot);
+                        var isSelected = Model.TimeSlot == slot && !isBooked;
+
+                        <div class="col-sm-6 col-md-4">
+                            <div class="slot-card p-3 rounded-3 text-center border @(isBooked ? "slot-booked" : (isSelected ? "slot-selected" : "slot-available"))"
+                                 data-slot="@slot"
+                                 role="button"
+                                 tabindex="@(isBooked ? "-1" : "0")"
+                                 aria-disabled="@(isBooked ? "true" : "false")">
+                                <div class="fw-bold fs-6 mb-1 slot-time">@slot</div>
+                                <div class="slot-badge">
+                                    @if (isBooked)
+                                    {
+                                        <span class="badge bg-secondary text-dark"><i class="bi bi-lock-fill me-1"></i>Booked</span>
+                                    }
+                                    else if (isSelected)
+                                    {
+                                        <span class="badge bg-danger text-white"><i class="bi bi-check2 me-1"></i>Selected</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Available</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Notes Box -->
+            <div class="dt-card p-4 mb-4">
+                <h4 class="dt-h2 text-white mb-3 d-flex align-items-center">
+                    <span class="badge bg-danger rounded-circle p-2 me-2 fs-6">4</span>
+                    Notes & Special Instructions
+                </h4>
+
+                <div class="mb-2">
+                    <label asp-for="Notes" class="form-label">Describe any specific symptoms, noises or requests</label>
+                    <textarea asp-for="Notes" class="form-control" rows="4" placeholder="e.g. Brake pedal vibrates at high speeds; please check engine oil leak under radiator..."></textarea>
+                    <span asp-validation-for="Notes" class="text-danger small"></span>
+                </div>
+                <small class="text-secondary-dt">Our mechanics inspect every complaint thoroughly before starting work.</small>
+            </div>
+        </div>
+
+        <!-- Right Column: Customer Info & Booking Summary -->
+        <div class="col-lg-4">
+            <div class="dt-card p-4 dt-summary mb-4">
+                <h4 class="dt-h2 text-white mb-3"><i class="bi bi-person-lines-fill me-2 text-red"></i>Customer Contact</h4>
+
+                <div class="mb-3">
+                    <label asp-for="CustomerName" class="form-label">Full Name <span class="text-red">*</span></label>
+                    <input asp-for="CustomerName" class="form-control" placeholder="Your full name" required />
+                    <span asp-validation-for="CustomerName" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CustomerPhone" class="form-label">Phone Number <span class="text-red">*</span></label>
+                    <input asp-for="CustomerPhone" class="form-control" placeholder="e.g. 077-1234567" required />
+                    <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="CustomerEmail" class="form-label">Email Address (Optional)</label>
+                    <input asp-for="CustomerEmail" class="form-control" placeholder="name@example.com" />
+                    <span asp-validation-for="CustomerEmail" class="text-danger small"></span>
+                </div>
+
+                <hr class="border-secondary my-3" />
+
+                <div class="p-3 rounded-3 bg-dark border border-secondary mb-3">
+                    <div class="text-secondary-dt small text-uppercase fw-semibold mb-2">Booking Summary</div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Date:</span>
+                        <strong class="text-white" id="summaryDate">@Model.AppointmentDate.ToString("yyyy-MM-dd")</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Time Slot:</span>
+                        <strong class="text-red" id="summarySlot">@(string.IsNullOrEmpty(Model.TimeSlot) ? "None selected" : Model.TimeSlot)</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Status:</span>
+                        <span class="badge bg-warning text-dark">Pending Confirmation</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100" id="btnSubmitBooking">
+                    <i class="bi bi-calendar-check me-1"></i>Confirm & Book Appointment
+                </button>
+                <div class="text-center mt-2">
+                    <small class="text-secondary-dt">No prepayment required. Pay at the garage.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Styles {
+    <style>
+        .slot-card {
+            background-color: var(--dt-gray-900);
+            border-color: var(--dt-gray-700) !important;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+        .slot-card.slot-available:hover {
+            border-color: var(--dt-red) !important;
+            transform: translateY(-2px);
+            background-color: rgba(229, 9, 20, 0.08);
+        }
+        .slot-card.slot-selected {
+            border-color: var(--dt-red) !important;
+            background-color: rgba(229, 9, 20, 0.18);
+            box-shadow: 0 0 12px rgba(229, 9, 20, 0.35);
+        }
+        /* GREYED OUT BOOKED SLOTS - NOT SELECTABLE */
+        .slot-card.slot-booked {
+            background-color: #1a1a1a !important;
+            border-color: #2c2c2c !important;
+            color: #6c757d !important;
+            opacity: 0.55;
+            cursor: not-allowed !important;
+            pointer-events: none;
+            filter: grayscale(1);
+        }
+        .slot-card.slot-booked .slot-time {
+            text-decoration: line-through;
+            color: #666;
+        }
+    </style>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(function () {
+            // Quick vehicle select buttons
+            $('.vehicle-quick-btn').on('click', function () {
+                $('.vehicle-quick-btn').removeClass('active btn-danger text-white border-danger').addClass('btn-outline-dt');
+                $(this).addClass('active btn-danger text-white border-danger').removeClass('btn-outline-dt');
+                var veh = $(this).data('veh');
+                $('#VehicleNoInput').val(veh);
+            });
+
+            // Slot card selection click
+            $(document).on('click', '.slot-card.slot-available, .slot-card.slot-selected', function () {
+                if ($(this).hasClass('slot-booked')) return;
+
+                var slot = $(this).data('slot');
+                $('#selectedTimeSlotInput').val(slot);
+                $('#summarySlot').text(slot);
+
+                $('.slot-card').not('.slot-booked').removeClass('slot-selected').addClass('slot-available');
+                $('.slot-card').not('.slot-booked').find('.slot-badge').html('<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Available</span>');
+
+                $(this).removeClass('slot-available').addClass('slot-selected');
+                $(this).find('.slot-badge').html('<span class="badge bg-danger text-white"><i class="bi bi-check2 me-1"></i>Selected</span>');
+            });
+
+            // Date picker change -> update available / greyed-out booked slots via AJAX
+            $('#appointmentDateInput').on('change', function () {
+                var selectedDate = $(this).val();
+                if (!selectedDate) return;
+
+                $('#summaryDate').text(selectedDate);
+                var currentSelectedSlot = $('#selectedTimeSlotInput').val();
+
+                $.ajax({
+                    url: '@Url.Action("GetBookedSlots", "Appointments")',
+                    data: { date: selectedDate },
+                    type: 'GET',
+                    success: function (res) {
+                        if (res && res.success) {
+                            var booked = res.bookedSlots || [];
+                            var slotWasInvalidated = false;
+
+                            $('.slot-card').each(function () {
+                                var slotVal = $(this).data('slot');
+                                var isBooked = booked.indexOf(slotVal) !== -1;
+
+                                $(this).removeClass('slot-booked slot-available slot-selected');
+
+                                if (isBooked) {
+                                    $(this).addClass('slot-booked');
+                                    $(this).attr('aria-disabled', 'true');
+                                    $(this).find('.slot-badge').html('<span class="badge bg-secondary text-dark"><i class="bi bi-lock-fill me-1"></i>Booked</span>');
+
+                                    if (currentSelectedSlot === slotVal) {
+                                        slotWasInvalidated = true;
+                                    }
+                                } else {
+                                    $(this).attr('aria-disabled', 'false');
+                                    if (currentSelectedSlot === slotVal) {
+                                        $(this).addClass('slot-selected');
+                                        $(this).find('.slot-badge').html('<span class="badge bg-danger text-white"><i class="bi bi-check2 me-1"></i>Selected</span>');
+                                    } else {
+                                        $(this).addClass('slot-available');
+                                        $(this).find('.slot-badge').html('<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Available</span>');
+                                    }
+                                }
+                            });
+
+                            if (slotWasInvalidated) {
+                                $('#selectedTimeSlotInput').val('');
+                                $('#summarySlot').text('None selected');
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Prevent submit if no slot selected
+            $('#appointmentBookingForm').on('submit', function (e) {
+                var slot = $('#selectedTimeSlotInput').val();
+                if (!slot) {
+                    e.preventDefault();
+                    alert('Please select an available time slot before confirming your booking.');
+                    $('html, body').animate({
+                        scrollTop: $("#timeSlotsContainer").offset().top - 120
+                    }, 400);
+                }
+            });
+        });
+    </script>
+}
+
