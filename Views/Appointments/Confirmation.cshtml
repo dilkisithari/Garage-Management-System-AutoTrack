@@ -1,0 +1,93 @@
+@model AppointmentViewModel
+@{
+    ViewData["Title"] = "Appointment Confirmed - " + Model.AppointmentNo;
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-lg-8 col-xl-7">
+        <div class="dt-card p-4 p-md-5 text-center mb-4">
+            <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle bg-success-subtle text-success mb-3" style="width: 72px; height: 72px;">
+                <i class="bi bi-check-circle-fill fs-1"></i>
+            </div>
+
+            <p class="dt-eyebrow justify-content-center mb-1"><span></span>Booking Request Received</p>
+            <h1 class="dt-display mb-2">You're All Set!</h1>
+            <p class="text-secondary-dt mb-4">
+                Thank you, <strong class="text-white">@Model.CustomerName</strong>. We have received your service request for vehicle
+                <span class="badge bg-danger fs-6 ms-1">@Model.VehicleNo</span>.
+            </p>
+
+            <!-- Appointment Details Receipt -->
+            <div class="dt-card p-4 text-start bg-dark border border-secondary mb-4">
+                <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-3">
+                    <div>
+                        <small class="text-secondary-dt text-uppercase fw-semibold">Appointment Reference</small>
+                        <div class="fs-4 fw-bold text-red">@Model.AppointmentNo</div>
+                    </div>
+                    <div>
+                        @if (Model.Status == "Confirmed")
+                        {
+                            <span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill me-1"></i>Confirmed</span>
+                        }
+                        else if (Model.Status == "Pending")
+                        {
+                            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-clock-history me-1"></i>Pending Review</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger fs-6"><i class="bi bi-x-circle-fill me-1"></i>Cancelled</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <small class="text-secondary-dt d-block">Service Required</small>
+                        <strong class="text-white fs-6">@Model.ServiceType</strong>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-secondary-dt d-block">Scheduled Date</small>
+                        <strong class="text-white fs-6"><i class="bi bi-calendar3 me-1 text-red"></i>@Model.AppointmentDate.ToString("dddd, MMMM dd, yyyy")</strong>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-secondary-dt d-block">Time Slot</small>
+                        <strong class="text-white fs-6"><i class="bi bi-clock me-1 text-red"></i>@Model.TimeSlot</strong>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-secondary-dt d-block">Contact Phone</small>
+                        <strong class="text-white fs-6"><i class="bi bi-telephone me-1 text-secondary"></i>@Model.CustomerPhone</strong>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Notes))
+                    {
+                        <div class="col-12 border-top border-secondary pt-3 mt-3">
+                            <small class="text-secondary-dt d-block">Customer Notes & Instructions</small>
+                            <span class="text-white fst-italic">"@Model.Notes"</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Helpful notice -->
+            <div class="alert alert-dark border border-secondary text-secondary-dt text-start small mb-4">
+                <i class="bi bi-info-circle text-info me-2 fs-5 align-middle"></i>
+                Our front desk team will contact you by phone if any preliminary parts or clarifications are needed before your arrival. Please arrive 10 minutes prior to your selected slot.
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a asp-action="Book" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Book Another Appointment
+                </a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a asp-action="My" class="btn btn-outline-dt">
+                        <i class="bi bi-list-check me-1"></i>View My Bookings
+                    </a>
+                }
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-dt">
+                    <i class="bi bi-house me-1"></i>Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+

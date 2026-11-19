@@ -1,0 +1,94 @@
+@model List<AppointmentViewModel>
+@{
+    ViewData["Title"] = "My Service Appointments";
+}
+
+<div class="dt-page-head d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Customer Portal</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-calendar-check text-red me-2"></i>My Appointments</h1>
+        <p class="text-secondary-dt mb-0">Track and manage your upcoming vehicle service reservations</p>
+    </div>
+    <a asp-action="Book" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Book New Appointment
+    </a>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-calendar-x fs-1 text-secondary mb-3 d-block"></i>
+        <h4 class="text-white">No Appointments Found</h4>
+        <p class="text-secondary-dt mb-4">You have not scheduled any service appointments yet.</p>
+        <a asp-action="Book" class="btn btn-primary btn-lg">
+            <i class="bi bi-calendar-plus me-1"></i>Book Your First Service
+        </a>
+    </div>
+}
+else
+{
+    <div class="dt-card p-0 overflow-hidden mb-4">
+        <div class="table-responsive">
+            <table class="table dt-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Reference</th>
+                        <th>Date & Time</th>
+                        <th>Vehicle</th>
+                        <th>Service Type</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var appt in Model)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <strong class="text-white">@appt.AppointmentNo</strong>
+                                <div class="small text-secondary">Booked @appt.CreatedAt.ToString("MMM dd")</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-white">@appt.AppointmentDate.ToString("yyyy-MM-dd")</div>
+                                <div class="small text-secondary"><i class="bi bi-clock me-1"></i>@appt.TimeSlot</div>
+                            </td>
+                            <td>
+                                <div><span class="badge bg-danger">@appt.VehicleNo</span></div>
+                                <small class="text-secondary-dt">@appt.VehicleModel</small>
+                            </td>
+                            <td>
+                                <span class="text-white">@appt.ServiceType</span>
+                                @if (!string.IsNullOrWhiteSpace(appt.Notes))
+                                {
+                                    <div class="small text-secondary-dt text-truncate" style="max-width: 240px;">
+                                        "@appt.Notes"
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                @if (appt.Status == "Confirmed")
+                                {
+                                    <span class="badge bg-success text-dark"><i class="bi bi-check-circle-fill me-1"></i>Confirmed</span>
+                                }
+                                else if (appt.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Pending</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle-fill me-1"></i>Cancelled</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <a asp-action="Confirmation" asp-route-id="@appt.Id" class="btn btn-sm btn-outline-dt">
+                                    <i class="bi bi-receipt me-1"></i>View Details
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+

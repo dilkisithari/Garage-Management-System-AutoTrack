@@ -27,6 +27,9 @@
                     <li class="nav-item">
                         <a class="nav-link dt-nav-link @(controller == "Home" && action == "Index" && area == null ? "active" : "")" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link dt-nav-link @(controller == "Appointments" && action == "Book" && area == null ? "active" : "")" asp-area="" asp-controller="Appointments" asp-action="Book">Book Appointment</a>
+                    </li>
 
                     @if (isAuth)
                     {
@@ -52,6 +55,18 @@
                              <li class="nav-item">
                                  <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Suppliers" ? "active" : "")" asp-area="FrontDesk" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
                              </li>
+
+                             <li class="nav-item">
+                                 <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Appointments" ? "active" : "")" asp-area="FrontDesk" asp-controller="Appointments" asp-action="Index">Appointments</a>
+                             </li>
+                        }
+
+                        @if (role == "Customer")
+                        {
+                             <li class="nav-item">
+                                 <a class="nav-link dt-nav-link @(controller == "Appointments" && action == "My" ? "active" : "")" asp-area="" asp-controller="Appointments" asp-action="My">My Bookings</a>
+                             </li>
+                        }
                                      
 
 
