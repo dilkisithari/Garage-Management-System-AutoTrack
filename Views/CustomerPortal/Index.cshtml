@@ -1,0 +1,141 @@
+@model CustomerPortalViewModel
+@{
+    ViewData["Title"] = "Customer Portal";
+    var selectedTab = Context.Request.Query["tab"].ToString();
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Customer Portal</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-person-circle text-red me-2"></i>My AutoTrack</h1>
+        <p class="text-secondary-dt mb-0">Your profile, vehicles, service history and appointments in one place.</p>
+    </div>
+    <a asp-controller="Appointments" asp-action="Book" class="btn btn-primary">
+        <i class="bi bi-calendar-plus me-1"></i>Book a Service
+    </a>
+</div>
+
+<ul class="nav nav-tabs mb-4" id="portalTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(selectedTab == "profile" ? "active" : selectedTab == "" ? "active" : "")" id="profile-tab-button" data-bs-toggle="tab" data-bs-target="#profile-tab" type="button" role="tab">
+            <i class="bi bi-person me-1"></i>My Profile
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(selectedTab == "vehicles" ? "active" : "")" id="vehicles-tab-button" data-bs-toggle="tab" data-bs-target="#vehicles-tab" type="button" role="tab">
+            <i class="bi bi-car-front me-1"></i>My Vehicles <span class="badge bg-secondary ms-1">@Model.Vehicles.Count</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(selectedTab == "appointments" ? "active" : "")" id="appointments-tab-button" data-bs-toggle="tab" data-bs-target="#appointments-tab" type="button" role="tab">
+            <i class="bi bi-calendar-check me-1"></i>My Appointments <span class="badge bg-secondary ms-1">@Model.Appointments.Count</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="portalTabsContent">
+    <section class="tab-pane fade @(selectedTab == "profile" || selectedTab == "" ? "show active" : "")" id="profile-tab" role="tabpanel" aria-labelledby="profile-tab-button">
+        <div class="dt-card p-4">
+            <h2 class="dt-h2 mb-1">My Profile</h2>
+            <p class="text-secondary-dt mb-4">Keep your contact number up to date for service and appointment notifications.</p>
+            <form asp-action="UpdateProfile" method="post" class="row g-3">
+                @Html.AntiForgeryToken()
+                <div class="col-md-6">
+                    <label class="form-label">Full name</label>
+                    <input class="form-control" value="@Model.Profile.FullName" readonly />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">E-mail / username</label>
+                    <input class="form-control" value="@(string.IsNullOrEmpty(Model.Profile.Email) ? "Not provided" : Model.Profile.Email)" readonly />
+                </div>
+                <div class="col-md-6">
+                    <label for="Phone" class="form-label">Phone number</label>
+                    <input id="Phone" name="Phone" value="@Model.Profile.Phone" class="form-control" autocomplete="tel" />
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Save profile</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="tab-pane fade @(selectedTab == "vehicles" ? "show active" : "")" id="vehicles-tab" role="tabpanel" aria-labelledby="vehicles-tab-button">
+        @if (Model.Vehicles.Count == 0)
+        {
+            <div class="dt-card p-5 text-center">
+                <i class="bi bi-car-front fs-1 text-secondary mb-3 d-block"></i>
+                <h2 class="dt-h2">No vehicles on file</h2>
+                <p class="text-secondary-dt mb-0">Your vehicles will appear here after you book a service or visit the garage.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var vehicle in Model.Vehicles)
+                {
+                    <div class="col-md-6 col-xl-4">
+                        <div class="dt-card p-4 h-100">
+                            <div class="d-flex align-items-start justify-content-between mb-3">
+                                <span class="badge bg-danger fs-6">@vehicle.VehicleNo</span>
+                                <i class="bi bi-car-front-fill fs-4 text-red"></i>
+                            </div>
+                            <p class="text-secondary-dt mb-3">@vehicle.VehicleModel</p>
+                            <a asp-controller="ServiceHistory" asp-action="Index" asp-route-vehicleNo="@vehicle.VehicleNo" class="btn btn-outline-dt btn-sm">
+                                <i class="bi bi-clock-history me-1"></i>View service history
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="tab-pane fade @(selectedTab == "appointments" ? "show active" : "")" id="appointments-tab" role="tabpanel" aria-labelledby="appointments-tab-button">
+        @if (Model.Appointments.Count == 0)
+        {
+            <div class="dt-card p-5 text-center">
+                <i class="bi bi-calendar-x fs-1 text-secondary mb-3 d-block"></i>
+                <h2 class="dt-h2">No appointments yet</h2>
+                <p class="text-secondary-dt mb-4">Book a service appointment and it will appear here.</p>
+                <a asp-controller="Appointments" asp-action="Book" class="btn btn-primary">Book an appointment</a>
+            </div>
+        }
+        else
+        {
+            <div class="dt-card p-0 overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table dt-table align-middle mb-0">
+                        <thead>
+                            <tr><th class="ps-4">Reference</th><th>Date & time</th><th>Vehicle</th><th>Service</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var appointment in Model.Appointments)
+                            {
+                                <tr>
+                                    <td class="ps-4"><strong class="text-white">@appointment.AppointmentNo</strong></td>
+                                    <td>@appointment.AppointmentDate.ToString("yyyy-MM-dd")<div class="small text-secondary">@appointment.TimeSlot</div></td>
+                                    <td><span class="badge bg-danger">@appointment.VehicleNo</span></td>
+                                    <td>@appointment.ServiceType</td>
+                                    <td>
+                                        @if (appointment.Status == "Confirmed")
+                                        {
+                                            <span class="badge bg-success">Confirmed</span>
+                                        }
+                                        else if (appointment.Status == "Pending")
+                                        {
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </section>
+</div>

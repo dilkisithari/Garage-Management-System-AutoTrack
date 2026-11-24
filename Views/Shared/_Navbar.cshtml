@@ -59,15 +59,25 @@
                              <li class="nav-item">
                                  <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Appointments" ? "active" : "")" asp-area="FrontDesk" asp-controller="Appointments" asp-action="Index">Appointments</a>
                              </li>
+
+                              <li class="nav-item">
+                                  <a class="nav-link dt-nav-link @(controller == "ServiceHistory" ? "active" : "")" asp-area="" asp-controller="ServiceHistory" asp-action="Index">Service history</a>
+                              </li>
                         }
 
                         @if (role == "Customer")
                         {
                              <li class="nav-item">
-                                 <a class="nav-link dt-nav-link @(controller == "Appointments" && action == "My" ? "active" : "")" asp-area="" asp-controller="Appointments" asp-action="My">My Bookings</a>
+                                 <a class="nav-link dt-nav-link @(controller == "CustomerPortal" || (controller == "Appointments" && action == "My") ? "active" : "")" asp-area="" asp-controller="CustomerPortal" asp-action="Index">Customer Portal</a>
                              </li>
                         }
-                                     
+
+                        @if (role == "Owner")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link dt-nav-link @(controller == "UserAdmin" ? "active" : "")" asp-area="" asp-controller="UserAdmin" asp-action="Index">User admin</a>
+                            </li>
+                        }
 
 
                         <li class="nav-item dropdown ms-lg-2">
@@ -85,7 +95,6 @@
                                 </li>
                             </ul>
                         </li>
-                    }
                     }
                     else
                     {

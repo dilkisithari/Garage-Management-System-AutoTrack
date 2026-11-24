@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authentication;
+using AutoTrack.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +19,17 @@ builder.Services
         options.AccessDeniedPath = "/Error/AccessDenied";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var username = context.Principal?.FindFirstValue(ClaimTypes.Name);
+            var role = context.Principal?.FindFirstValue(ClaimTypes.Role);
+            var user = username == null ? null : MockUserStore.Get(username);
+            if (user == null || !user.IsActive || user.Role != role)
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+        };
     });
 
 builder.Services.AddAuthorization();

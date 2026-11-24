@@ -8,6 +8,7 @@ public class MockUser
     public string FullName { get; set; } = "";
     public string Role { get; set; } = "";   // Owner | FrontDesk | Mechanic | Customer
     public string? Phone { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public static class MockUserStore
@@ -26,9 +27,26 @@ public static class MockUserStore
     {
         lock (Sync)
         {
-            return Users.FirstOrDefault(u =>
+            var user = Users.FirstOrDefault(u =>
                 string.Equals(u.Username, username.Trim(), StringComparison.OrdinalIgnoreCase)
-                && u.Password == password);
+                && u.Password == password
+                && u.IsActive);
+            return user == null ? null : Clone(user);
+        }
+    }
+
+    public static List<MockUser> All()
+    {
+        lock (Sync) { return Users.Select(Clone).OrderBy(u => u.FullName).ToList(); }
+    }
+
+    public static MockUser? Get(string username)
+    {
+        lock (Sync)
+        {
+            var user = Users.FirstOrDefault(u =>
+                string.Equals(u.Username, username.Trim(), StringComparison.OrdinalIgnoreCase));
+            return user == null ? null : Clone(user);
         }
     }
 
@@ -40,9 +58,64 @@ public static class MockUserStore
         }
     }
 
-    public static void Add(MockUser user)
+    public static bool Add(MockUser user)
     {
-        lock (Sync) { Users.Add(user); }
+        lock (Sync)
+        {
+            if (Users.Any(u => string.Equals(u.Username, user.Username.Trim(), StringComparison.OrdinalIgnoreCase)))
+                return false;
+
+            user.Username = user.Username.Trim();
+            Users.Add(Clone(user));
+            return true;
+        }
+    }
+
+    public static bool UpdateProfile(string username, string fullName, string? phone)
+    {
+        lock (Sync)
+        {
+            var user = Users.FirstOrDefault(u =>
+                string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
+            if (user == null) return false;
+            user.FullName = fullName.Trim();
+            user.Phone = phone?.Trim();
+            return true;
+        }
+    }
+
+    public static bool UpdateRole(string username, string role)
+    {
+        lock (Sync)
+        {
+            var user = Users.FirstOrDefault(u =>
+                string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
+            if (user == null) return false;
+
+            if (user.IsActive && user.Role == "Owner" && role != "Owner" &&
+                Users.Count(u => u.IsActive && u.Role == "Owner") <= 1)
+                return false;
+
+            user.Role = role;
+            return true;
+        }
+    }
+
+    public static bool SetActive(string username, bool isActive)
+    {
+        lock (Sync)
+        {
+            var user = Users.FirstOrDefault(u =>
+                string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
+            if (user == null) return false;
+
+            if (!isActive && user.IsActive && user.Role == "Owner" &&
+                Users.Count(u => u.IsActive && u.Role == "Owner") <= 1)
+                return false;
+
+            user.IsActive = isActive;
+            return true;
+        }
     }
 
     public static bool ChangePassword(string username, string oldPassword, string newPassword)
@@ -57,4 +130,14 @@ public static class MockUserStore
             return true;
         }
     }
+
+    private static MockUser Clone(MockUser user) => new()
+    {
+        Username = user.Username,
+        Password = user.Password,
+        FullName = user.FullName,
+        Role = user.Role,
+        Phone = user.Phone,
+        IsActive = user.IsActive
+    };
 }

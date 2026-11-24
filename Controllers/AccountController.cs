@@ -33,6 +33,7 @@ public class AccountController : Controller
         }
 
         await SignInAsync(user, model.RememberMe);
+        MockAuditLog.Add(user.Username, "Signed in", "Signed in to AutoTrack.");
 
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
             return LocalRedirect(returnUrl);
@@ -59,15 +60,21 @@ public class AccountController : Controller
             return View(model);
         }
 
-        MockUserStore.Add(new MockUser
+        var user = new MockUser
         {
             Username = model.Email.Trim(),
             Password = model.Password,
             FullName = model.FullName.Trim(),
             Phone = model.Phone.Trim(),
             Role = "Customer"
-        });
+        };
+        if (!MockUserStore.Add(user))
+        {
+            ModelState.AddModelError(nameof(model.Email), "An account with this e-mail already exists.");
+            return View(model);
+        }
 
+        MockAuditLog.Add(user.Username, "Account created", "Created a customer account.");
         TempData["Success"] = "Account created. You can sign in now.";
         return RedirectToAction(nameof(Login));
     }
@@ -75,6 +82,7 @@ public class AccountController : Controller
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        MockAuditLog.Add(User.Identity?.Name ?? "", "Signed out", "Signed out of AutoTrack.");
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction("Index", "Home");
     }
@@ -94,6 +102,7 @@ public class AccountController : Controller
             return View(model);
         }
 
+        MockAuditLog.Add(username, "Password changed", "Updated account password.");
         TempData["Success"] = "Password updated.";
         return RedirectToAction("Welcome", "Home");
     }

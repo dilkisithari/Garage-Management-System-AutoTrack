@@ -1,0 +1,109 @@
+@model ServiceHistoryViewModel
+@{
+    ViewData["Title"] = string.IsNullOrEmpty(Model.VehicleNo) ? "Vehicle Service History" : $"Service History - {Model.VehicleNo}";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Vehicle service history</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-clock-history text-red me-2"></i>@(string.IsNullOrEmpty(Model.VehicleNo) ? "Select a vehicle" : Model.VehicleNo)</h1>
+        <p class="text-secondary-dt mb-0">Completed work, parts and charges recorded for each vehicle.</p>
+    </div>
+    @if (User.IsInRole("Customer"))
+    {
+        <a asp-controller="CustomerPortal" asp-action="Index" asp-route-tab="vehicles" class="btn btn-outline-dt">
+            <i class="bi bi-arrow-left me-1"></i>My Vehicles
+        </a>
+    }
+</div>
+
+@if (string.IsNullOrEmpty(Model.VehicleNo))
+{
+    @if (Model.Vehicles.Count == 0)
+    {
+        <div class="dt-card p-5 text-center">
+            <i class="bi bi-car-front fs-1 text-secondary mb-3 d-block"></i>
+            <h2 class="dt-h2">No vehicles found</h2>
+            <p class="text-secondary-dt mb-0">Vehicle service records will appear here when job cards are created.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var vehicle in Model.Vehicles)
+            {
+                <div class="col-md-6 col-xl-4">
+                    <div class="dt-card p-4 h-100">
+                        <span class="badge bg-danger fs-6 mb-3 align-self-start">@vehicle.VehicleNo</span>
+                        <p class="text-secondary-dt">@vehicle.VehicleModel</p>
+                        <a asp-action="Index" asp-route-vehicleNo="@vehicle.VehicleNo" class="btn btn-outline-dt btn-sm align-self-start">
+                            <i class="bi bi-clock-history me-1"></i>View history
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+else if (Model.Jobs.Count == 0)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-clipboard2-x fs-1 text-secondary mb-3 d-block"></i>
+        <h2 class="dt-h2">No completed services yet</h2>
+        <p class="text-secondary-dt mb-0">Completed job records for this vehicle will appear here.</p>
+    </div>
+}
+else
+{
+    <div class="dt-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table dt-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Date / job</th>
+                        <th>Customer complaint</th>
+                        <th>Work done</th>
+                        <th>Parts</th>
+                        <th class="text-end pe-4">Total cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var job in Model.Jobs)
+                    {
+                        var work = job.Tasks.Where(task => task.Done && !string.IsNullOrWhiteSpace(task.Description))
+                            .Select(task => task.Description!)
+                            .Concat(job.Labour.Where(labour => !string.IsNullOrWhiteSpace(labour.Description))
+                                .Select(labour => labour.Description!))
+                            .Distinct()
+                            .ToList();
+                        <tr>
+                            <td class="ps-4"><strong class="text-white">@job.DateOpened.ToString("yyyy-MM-dd")</strong><div class="small text-secondary">@job.JobNo</div></td>
+                            <td>@job.Complaint</td>
+                            <td>
+                                @if (work.Count == 0)
+                                {
+                                    <span class="text-secondary">No work details recorded</span>
+                                }
+                                else
+                                {
+                                    <ul class="mb-0 ps-3">@foreach (var item in work) { <li>@item</li> }</ul>
+                                }
+                            </td>
+                            <td>
+                                @if (job.Parts.Count == 0)
+                                {
+                                    <span class="text-secondary">None</span>
+                                }
+                                else
+                                {
+                                    <ul class="mb-0 ps-3">@foreach (var part in job.Parts) { <li>@part.PartName &times; @part.Quantity</li> }</ul>
+                                }
+                            </td>
+                            <td class="text-end pe-4 text-white fw-semibold">LKR @job.GrandTotal.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

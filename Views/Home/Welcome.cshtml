@@ -59,6 +59,21 @@
                 <div><strong>Calendar View</strong><span>Day & week view of booked slots</span></div>
             </a>
         </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="" asp-controller="ServiceHistory" asp-action="Index" asp-route-vehicleNo="CAB-1234">
+                <i class="bi bi-clock-history"></i>
+                <div><strong>Service history</strong><span>Review completed work by vehicle</span></div>
+            </a>
+        </div>
+        @if (role == "Owner")
+        {
+            <div class="col-md-6 col-xl-4">
+                <a class="dt-quick" asp-area="" asp-controller="UserAdmin" asp-action="Index">
+                    <i class="bi bi-people"></i>
+                    <div><strong>User administration</strong><span>Manage accounts, roles and access</span></div>
+                </a>
+            </div>
+        }
     </div>
 }
 
@@ -72,9 +87,9 @@
             </a>
         </div>
         <div class="col-md-6 col-xl-6">
-            <a class="dt-quick" asp-area="" asp-controller="Appointments" asp-action="My">
-                <i class="bi bi-calendar2-check"></i>
-                <div><strong>My Appointments</strong><span>Track your scheduled service bookings</span></div>
+            <a class="dt-quick" asp-area="" asp-controller="CustomerPortal" asp-action="Index">
+                <i class="bi bi-person-circle"></i>
+                <div><strong>Customer Portal</strong><span>Manage your profile, vehicles and appointments</span></div>
             </a>
         </div>
     </div>

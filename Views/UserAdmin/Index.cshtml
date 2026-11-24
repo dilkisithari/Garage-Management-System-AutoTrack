@@ -1,0 +1,126 @@
+@model UserAdminIndexViewModel
+@{
+    ViewData["Title"] = "User Administration";
+    var roles = (string[])ViewBag.Roles;
+}
+
+<div class="dt-page-head d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Owner tools</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-people text-red me-2"></i>User Administration</h1>
+        <p class="text-secondary-dt mb-0">Create accounts, assign roles and manage access.</p>
+    </div>
+    <a asp-action="AuditLog" class="btn btn-outline-dt"><i class="bi bi-journal-text me-1"></i>View audit log</a>
+</div>
+
+<div class="dt-card p-4 mb-4">
+    <h2 class="dt-h2 mb-3"><i class="bi bi-person-plus text-red me-2"></i>Add user</h2>
+    <form asp-action="Create" method="post" class="row g-3">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-danger small"></div>
+        <div class="col-md-6 col-xl-3">
+            <label asp-for="NewUser.FullName" class="form-label"></label>
+            <input asp-for="NewUser.FullName" class="form-control" />
+            <span asp-validation-for="NewUser.FullName" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <label asp-for="NewUser.Username" class="form-label"></label>
+            <input asp-for="NewUser.Username" class="form-control" autocomplete="username" />
+            <span asp-validation-for="NewUser.Username" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6 col-xl-2">
+            <label asp-for="NewUser.Phone" class="form-label"></label>
+            <input asp-for="NewUser.Phone" class="form-control" />
+            <span asp-validation-for="NewUser.Phone" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6 col-xl-2">
+            <label asp-for="NewUser.Password" class="form-label"></label>
+            <input asp-for="NewUser.Password" class="form-control" autocomplete="new-password" />
+            <span asp-validation-for="NewUser.Password" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6 col-xl-1">
+            <label asp-for="NewUser.Role" class="form-label"></label>
+            <select asp-for="NewUser.Role" class="form-select">
+                @foreach (var role in roles)
+                {
+                    <option value="@role">@role</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6 col-xl-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Add</button>
+        </div>
+    </form>
+</div>
+
+<div class="dt-card p-0 overflow-hidden">
+    <div class="d-flex justify-content-between align-items-center p-4 pb-3">
+        <h2 class="dt-h2 mb-0">Users <span class="badge bg-secondary">@Model.Users.Count</span></h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table dt-table align-middle mb-0">
+            <thead>
+                <tr><th class="ps-4">User</th><th>Phone</th><th>Role</th><th>Status</th><th class="text-end pe-4">Access</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td class="ps-4">
+                            <strong class="text-white">@user.FullName</strong>
+                            <div class="small text-secondary">@user.Username</div>
+                        </td>
+                        <td>@(string.IsNullOrWhiteSpace(user.Phone) ? "—" : user.Phone)</td>
+                        <td>
+                            @if (!string.Equals(user.Username, User.Identity?.Name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <form asp-action="UpdateRole" method="post" class="d-flex gap-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="username" value="@user.Username" />
+                                    <select name="role" class="form-select form-select-sm" aria-label="Role for @user.Username">
+                                        @foreach (var role in roles)
+                                        {
+                                            <option value="@role" selected="@(user.Role == role)">@role</option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-dt">Save</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@user.Role</span>
+                            }
+                        </td>
+                        <td>
+                            @if (user.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </td>
+                        <td class="text-end pe-4">
+                            @if (!string.Equals(user.Username, User.Identity?.Name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <form asp-action="SetActive" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="username" value="@user.Username" />
+                                    <input type="hidden" name="isActive" value="@(!user.IsActive)" />
+                                    <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-outline-danger" : "btn-outline-success")">
+                                        @(user.IsActive ? "Deactivate" : "Activate")
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="small text-secondary">Current user</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
