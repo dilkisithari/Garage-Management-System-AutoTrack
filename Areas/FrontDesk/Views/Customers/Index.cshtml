@@ -1,0 +1,170 @@
+@model CustomerListViewModel
+@{
+    ViewData["Title"] = "Customers";
+}
+
+<div class="dt-page-head d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-people me-2 text-red"></i>Customers</h1>
+        <p class="text-secondary-dt mb-0">
+            @Model.TotalCount registered customer@(Model.TotalCount == 1 ? "" : "s")
+        </p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add customer</a>
+</div>
+
+<!-- Search Toolbar -->
+<div class="dt-card dt-toolbar mb-4 p-3">
+    <form method="get" asp-action="Index" class="row g-2 align-items-center">
+        <div class="col-md-9">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+                <input name="search" type="search" value="@Model.Search"
+                       class="form-control"
+                       placeholder="Search by name or phone number..." />
+                <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+        </div>
+        <div class="col-md-3 text-md-end">
+            <a asp-action="Index" class="btn btn-outline-dt w-100">
+                <i class="bi bi-x-circle me-1"></i>Reset
+            </a>
+        </div>
+        @* carry page=1 when re-searching *@
+        <input type="hidden" name="page" value="1" />
+    </form>
+</div>
+
+<!-- Customer Table -->
+@if (Model.Items.Count == 0)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-people fs-1 text-secondary mb-3 d-block"></i>
+        <h4 class="text-white">No customers found</h4>
+        <p class="text-secondary-dt mb-3">
+            @(string.IsNullOrWhiteSpace(Model.Search)
+                ? "No customers registered yet."
+                : $"No customers matching \"{Model.Search}\".")
+        </p>
+        @if (string.IsNullOrWhiteSpace(Model.Search))
+        {
+            <a asp-action="Create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add customer</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-outline-dt btn-sm">Clear search</a>
+        }
+    </div>
+}
+else
+{
+    <div class="dt-card p-0 overflow-hidden mb-4">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead class="table-dark text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Name</th>
+                        <th>Contact Info</th>
+                        <th>Address</th>
+                        <th class="text-center">Vehicles</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Items)
+                    {
+                        var vehicleCount = AutoTrack.Models.MockVehicleData.GetByOwner(c.Id).Count;
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-white fs-6">@c.FullName</div>
+                                <span class="badge @(c.IsActive ? "bg-success" : "bg-secondary")">@(c.IsActive ? "Active" : "Inactive")</span>
+                                <small class="text-secondary-dt">
+                                    <i class="bi bi-calendar3 me-1"></i>Since @c.CreatedDate.ToString("MMM yyyy")
+                                </small>
+                            </td>
+                            <td>
+                                <div>
+                                    <a href="tel:@c.Phone" class="text-white text-decoration-none">
+                                        <i class="bi bi-telephone me-1 text-red"></i>@c.Phone
+                                    </a>
+                                </div>
+                                @if (!string.IsNullOrEmpty(c.Email))
+                                {
+                                    <div>
+                                        <a href="mailto:@c.Email" class="text-secondary small text-decoration-none">
+                                            <i class="bi bi-envelope me-1"></i>@c.Email
+                                        </a>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <span class="text-secondary small">@(c.Address ?? "—")</span>
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Vehicles" asp-route-id="@c.Id"
+                                   class="badge @(vehicleCount > 0 ? "bg-primary" : "bg-secondary") text-decoration-none py-1 px-2">
+                                    <i class="bi bi-car-front me-1"></i>@vehicleCount vehicle@(vehicleCount == 1 ? "" : "s")
+                                </a>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Edit" asp-route-id="@c.Id"
+                                       class="btn btn-outline-dt" title="Edit customer">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a asp-action="Vehicles" asp-route-id="@c.Id"
+                                       class="btn btn-outline-dt" title="View vehicles">
+                                        <i class="bi bi-car-front"></i>
+                                    </a>
+                                    <form asp-action="SetActive" asp-route-id="@c.Id" asp-route-isActive="@(!c.IsActive)" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn @(c.IsActive ? "btn-outline-warning" : "btn-outline-success")" title="@(c.IsActive ? "Deactivate" : "Reactivate")">
+                                            <i class="bi @(c.IsActive ? "bi-person-slash" : "bi-person-check")"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <nav aria-label="Customer list pages">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-search="@Model.Search"
+                       asp-route-page="@(Model.Page - 1)">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+
+                @for (int p = 1; p <= Model.TotalPages; p++)
+                {
+                    <li class="page-item @(p == Model.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-search="@Model.Search"
+                           asp-route-page="@p">@p</a>
+                    </li>
+                }
+
+                <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-search="@Model.Search"
+                       asp-route-page="@(Model.Page + 1)">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <p class="text-center text-secondary-dt small">
+            Showing @((Model.Page - 1) * Model.PageSize + 1)–@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount))
+            of @Model.TotalCount customers
+        </p>
+    }
+}
