@@ -1,0 +1,95 @@
+@model CustomerFormViewModel
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Add Customer" : $"Edit {Model.FullName}";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <a asp-action="Index" class="dt-back text-secondary-dt text-decoration-none mb-2 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i>Back to customers
+        </a>
+        <h1 class="dt-h1 mb-1">
+            <i class="bi bi-person-badge me-2 text-red"></i>@(isNew ? "Add New Customer" : "Edit Customer")
+        </h1>
+        <p class="text-secondary-dt mb-0">
+            @(isNew ? "Register a new customer in AutoTrack." : $"Update contact details for {Model.FullName}.")
+        </p>
+    </div>
+</div>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id.ToString())" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert mb-4"></div>
+
+    <div class="row g-4">
+        <!-- Left column – main fields -->
+        <div class="col-lg-8">
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-person-lines-fill me-2 text-red"></i>Customer Details</h2>
+
+                <div class="row g-3">
+                    <!-- Full Name -->
+                    <div class="col-12">
+                        <label asp-for="FullName" class="form-label">
+                            Full Name <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="FullName" class="form-control" placeholder="e.g. Kasun Silva" autofocus />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="col-md-6">
+                        <label asp-for="Phone" class="form-label">
+                            Phone Number <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary">
+                                <i class="bi bi-telephone"></i>
+                            </span>
+                            <input asp-for="Phone" class="form-control" placeholder="e.g. +94 77 123 4567" />
+                        </div>
+                        <span asp-validation-for="Phone" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary">
+                                <i class="bi bi-envelope"></i>
+                            </span>
+                            <input asp-for="Email" class="form-control" placeholder="e.g. customer@gmail.com" />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="col-12">
+                        <label asp-for="Address" class="form-label">Address</label>
+                        <input asp-for="Address" class="form-control"
+                               placeholder="e.g. 15 Flower Road, Colombo 03" />
+                        <span asp-validation-for="Address" class="text-danger small"></span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Right column – action card -->
+        <div class="col-lg-4">
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-check2-square me-2 text-red"></i>Save</h2>
+                <button type="submit" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-check-lg me-1"></i>@(isNew ? "Save Customer" : "Save Changes")
+                </button>
+                <a asp-action="Index" class="btn btn-outline-dt w-100">Cancel</a>
+            </section>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

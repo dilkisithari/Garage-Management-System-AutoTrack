@@ -1,0 +1,163 @@
+@model VehicleFormViewModel
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Add Vehicle" : $"Edit {Model.RegistrationNo}";
+    var currentYear = DateTime.Today.Year;
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        @if (Model.OwnerId > 0 && !isNew)
+        {
+            <a asp-controller="Customers" asp-action="Vehicles" asp-route-id="@Model.OwnerId"
+               class="dt-back text-secondary-dt text-decoration-none mb-2 d-inline-block">
+                <i class="bi bi-arrow-left me-1"></i>Back to customer's vehicles
+            </a>
+        }
+        else if (Model.OwnerId > 0)
+        {
+            <a asp-controller="Customers" asp-action="Vehicles" asp-route-id="@Model.OwnerId"
+               class="dt-back text-secondary-dt text-decoration-none mb-2 d-inline-block">
+                <i class="bi bi-arrow-left me-1"></i>Back to customer's vehicles
+            </a>
+        }
+        else
+        {
+            <a asp-controller="Vehicles" asp-action="Index"
+               class="dt-back text-secondary-dt text-decoration-none mb-2 d-inline-block">
+                <i class="bi bi-arrow-left me-1"></i>Back to vehicles
+            </a>
+        }
+        <h1 class="dt-h1 mb-1">
+            <i class="bi bi-car-front me-2 text-red"></i>@(isNew ? "Register New Vehicle" : "Edit Vehicle")
+        </h1>
+        <p class="text-secondary-dt mb-0">
+            @(isNew ? "Add a vehicle to the customer registry." : $"Update details for {Model.RegistrationNo}.")
+        </p>
+    </div>
+</div>
+
+<form method="post"
+      asp-controller="Vehicles"
+      asp-action="@(isNew ? "Create" : "Edit")"
+      asp-route-id="@(isNew ? null : Model.Id.ToString())"
+      novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert mb-4"></div>
+
+    <div class="row g-4">
+        <!-- Left column – main fields -->
+        <div class="col-lg-8">
+            <!-- Registration & Owner -->
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-card-text me-2 text-red"></i>Vehicle Identity</h2>
+                <div class="row g-3">
+                    <!-- Registration No -->
+                    <div class="col-md-6">
+                        <label asp-for="RegistrationNo" class="form-label">
+                            Registration No. <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="RegistrationNo" class="form-control text-uppercase"
+                               placeholder="e.g. CAB-1234" autofocus
+                               style="text-transform: uppercase;" />
+                        <span asp-validation-for="RegistrationNo" class="text-danger small"></span>
+                        <div class="form-text text-secondary-dt">Will be stored in upper case.</div>
+                    </div>
+
+                    <!-- Owner dropdown -->
+                    <div class="col-md-6">
+                        <label asp-for="OwnerId" class="form-label">
+                            Owner <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="OwnerId" class="form-select">
+                            <option value="">— Select customer —</option>
+                            @foreach (var opt in Model.OwnerOptions)
+                            {
+                                <option value="@opt.Id" selected="@(opt.Id == Model.OwnerId)">@opt.DisplayName</option>
+                            }
+                        </select>
+                        <span asp-validation-for="OwnerId" class="text-danger small"></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Make, Model, Year -->
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-gear me-2 text-red"></i>Vehicle Details</h2>
+                <div class="row g-3">
+                    <!-- Make -->
+                    <div class="col-md-4">
+                        <label asp-for="Make" class="form-label">
+                            Make <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="Make" class="form-control" placeholder="e.g. Toyota" />
+                        <span asp-validation-for="Make" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Model -->
+                    <div class="col-md-4">
+                        <label asp-for="VehicleModel" class="form-label">
+                            Model <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="VehicleModel" class="form-control" placeholder="e.g. Corolla" />
+                        <span asp-validation-for="VehicleModel" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Year -->
+                    <div class="col-md-4">
+                        <label asp-for="Year" class="form-label">
+                            Year <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="Year" type="number" class="form-control"
+                               min="1980" max="@currentYear" placeholder="@currentYear" />
+                        <span asp-validation-for="Year" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Colour -->
+                    <div class="col-md-6">
+                        <label asp-for="Colour" class="form-label">Colour</label>
+                        <input asp-for="Colour" class="form-control" placeholder="e.g. Pearl White" />
+                        <span asp-validation-for="Colour" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Mileage -->
+                    <div class="col-md-6">
+                        <label asp-for="Mileage" class="form-label">Mileage (km)</label>
+                        <div class="input-group">
+                            <input asp-for="Mileage" type="number" class="form-control"
+                                   min="0" placeholder="e.g. 45000" />
+                            <span class="input-group-text bg-dark border-secondary text-secondary">km</span>
+                        </div>
+                        <span asp-validation-for="Mileage" class="text-danger small"></span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Right column – actions -->
+        <div class="col-lg-4">
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-check2-square me-2 text-red"></i>Save</h2>
+                <button type="submit" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-check-lg me-1"></i>@(isNew ? "Register Vehicle" : "Save Changes")
+                </button>
+                @if (Model.OwnerId > 0)
+                {
+                    <a asp-controller="Customers" asp-action="Vehicles" asp-route-id="@Model.OwnerId"
+                       class="btn btn-outline-dt w-100">Cancel</a>
+                }
+                else
+                {
+                    <a asp-controller="Vehicles" asp-action="Index"
+                       class="btn btn-outline-dt w-100">Cancel</a>
+                }
+            </section>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

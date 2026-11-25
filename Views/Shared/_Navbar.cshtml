@@ -1,4 +1,4 @@
-@using System.Security.Claims
+﻿@using System.Security.Claims
 @{
     var isAuth = User.Identity?.IsAuthenticated == true;
     var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
@@ -54,6 +54,14 @@
 
                              <li class="nav-item">
                                  <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Suppliers" ? "active" : "")" asp-area="FrontDesk" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+                             </li>
+
+                             <li class="nav-item">
+                                 <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Customers" ? "active" : "")" asp-area="FrontDesk" asp-controller="Customers" asp-action="Index">Customers</a>
+                             </li>
+
+                             <li class="nav-item">
+                                 <a class="nav-link dt-nav-link @(area == "FrontDesk" && controller == "Vehicles" ? "active" : "")" asp-area="FrontDesk" asp-controller="Vehicles" asp-action="Index">Vehicles</a>
                              </li>
 
                              <li class="nav-item">
