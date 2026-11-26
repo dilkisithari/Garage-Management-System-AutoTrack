@@ -1,0 +1,104 @@
+@model EmployeeFormViewModel
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Add Employee" : $"Edit {Model.FullName}";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <a asp-action="Index" class="dt-back">
+            <i class="bi bi-arrow-left me-1"></i>Back to employees
+        </a>
+        <h1 class="dt-h1 mb-1">
+            <i class="bi bi-person-plus me-2 text-red"></i>@(isNew ? "Add Employee" : "Edit Employee")
+        </h1>
+        <p class="text-secondary-dt mb-0">
+            @(isNew ? "Register a new staff member in AutoTrack." : $"Update details and pay rate for {Model.FullName}.")
+        </p>
+    </div>
+</div>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id.ToString())" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert mb-4"></div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-person-vcard me-2 text-red"></i>Employee Information</h2>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="FullName" class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input asp-for="FullName" class="form-control" placeholder="e.g. Nuwan Perera" autofocus />
+                        <span asp-validation-for="FullName" class="field-validation-msg"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Role" class="form-label">Role <span class="text-danger">*</span></label>
+                        <select asp-for="Role" class="form-select">
+                            @foreach (var role in Model.RoleOptions)
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Role" class="field-validation-msg"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="HourlyRate" class="form-label">Hourly Rate (LKR) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">LKR</span>
+                            <input asp-for="HourlyRate" type="number" step="10" min="1" class="form-control" placeholder="e.g. 650" />
+                            <span class="input-group-text">/hr</span>
+                        </div>
+                        <span asp-validation-for="HourlyRate" class="field-validation-msg"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                            <input asp-for="Phone" class="form-control" placeholder="e.g. +94 77 123 4567" />
+                        </div>
+                        <span asp-validation-for="Phone" class="field-validation-msg"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Username" class="form-label">Linked Login Username (Optional)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">@@</span>
+                            <input asp-for="Username" class="form-control" placeholder="e.g. mechanic or desk" />
+                        </div>
+                        <small class="text-secondary-dt">Links this staff profile to their AutoTrack login for self Clock In/Out.</small>
+                        <span asp-validation-for="Username" class="field-validation-msg"></span>
+                    </div>
+
+                    <div class="col-md-6 d-flex align-items-center pt-md-4">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label fw-semibold">Active employee</label>
+                            <div class="small text-secondary-dt">Inactive staff cannot clock in.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="dt-card p-4">
+                <h2 class="dt-h2"><i class="bi bi-check2-square me-2 text-red"></i>Save</h2>
+                <button type="submit" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-check-lg me-1"></i>@(isNew ? "Save Employee" : "Save Changes")
+                </button>
+                <a asp-action="Index" class="btn btn-outline-dt w-100">Cancel</a>
+            </section>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

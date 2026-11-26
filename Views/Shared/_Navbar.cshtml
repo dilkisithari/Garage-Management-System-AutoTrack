@@ -71,6 +71,27 @@
                               <li class="nav-item">
                                   <a class="nav-link dt-nav-link @(controller == "ServiceHistory" ? "active" : "")" asp-area="" asp-controller="ServiceHistory" asp-action="Index">Service history</a>
                               </li>
+
+                              <li class="nav-item dropdown">
+                                  <a class="nav-link dt-nav-link dropdown-toggle @(controller == "Employees" || controller == "Attendance" ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                      Staff
+                                  </a>
+                                  <ul class="dropdown-menu dt-dropdown">
+                                      <li><a class="dropdown-item" asp-area="" asp-controller="Employees" asp-action="Index"><i class="bi bi-person-badge me-2"></i>Employees</a></li>
+                                      <li><a class="dropdown-item" asp-area="" asp-controller="Attendance" asp-action="Clock"><i class="bi bi-stopwatch me-2"></i>Clock In / Out</a></li>
+                                      <li><a class="dropdown-item" asp-area="" asp-controller="Attendance" asp-action="Sheet"><i class="bi bi-calendar3-week me-2"></i>Attendance Sheet</a></li>
+                                  </ul>
+                              </li>
+                        }
+
+                        @if (role == "Mechanic")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link dt-nav-link @(controller == "Attendance" && action == "Clock" ? "active" : "")" asp-area="" asp-controller="Attendance" asp-action="Clock">Clock In / Out</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link dt-nav-link @(controller == "Attendance" && action == "Sheet" ? "active" : "")" asp-area="" asp-controller="Attendance" asp-action="Sheet">Attendance Sheet</a>
+                            </li>
                         }
 
                         @if (role == "Customer")

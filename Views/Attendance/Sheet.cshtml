@@ -1,0 +1,263 @@
+@model AttendanceSheetViewModel
+@{
+    ViewData["Title"] = "Attendance Sheet";
+    var emp = Model.Employee;
+}
+
+<div class="dt-page-head mb-4 d-print-none">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Monthly Timecard</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-calendar3-week me-2 text-red"></i>Attendance Sheet</h1>
+        <p class="text-secondary-dt mb-0">
+            @Model.MonthStart.ToString("MMMM yyyy")
+            @if (emp != null)
+            {
+                <span>&middot; <strong>@emp.FullName</strong> (@emp.Role)</span>
+            }
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="Clock" asp-route-employeeId="@(emp?.Id)" class="btn btn-outline-dt">
+            <i class="bi bi-stopwatch me-1"></i>Clock In / Out
+        </a>
+        @if (Model.CanSwitchEmployee)
+        {
+            <a asp-controller="Employees" asp-action="Index" class="btn btn-outline-dt">
+                <i class="bi bi-person-badge me-1"></i>Employees
+            </a>
+        }
+        <button type="button" class="btn btn-primary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print Sheet
+        </button>
+    </div>
+</div>
+
+<!-- Filter Toolbar -->
+<div class="dt-card dt-toolbar mb-4 p-3 d-print-none">
+    <form method="get" asp-action="Sheet" class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <label for="sheet-employee" class="form-label">Employee</label>
+            @if (Model.CanSwitchEmployee)
+            {
+                <select id="sheet-employee" name="employeeId" class="form-select">
+                    @foreach (var opt in Model.EmployeeOptions)
+                    {
+                        <option value="@opt.Id" selected="@(opt.Id == Model.SelectedEmployeeId)">
+                            @opt.FullName (@opt.Role)@(opt.IsActive ? "" : " [Inactive]")
+                        </option>
+                    }
+                </select>
+            }
+            else
+            {
+                <input type="hidden" name="employeeId" value="@Model.SelectedEmployeeId" />
+                <input class="form-control" value="@(emp?.FullName ?? "Unassigned")" readonly />
+            }
+        </div>
+        <div class="col-md-4">
+            <label for="sheet-month" class="form-label">Month</label>
+            <select id="sheet-month" name="month" class="form-select">
+                @foreach (var m in Model.MonthOptions)
+                {
+                    <option value="@m.Value" selected="@(m.Value == Model.SelectedMonth)">@m.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-funnel me-1"></i>Load Sheet
+            </button>
+        </div>
+    </form>
+</div>
+
+@if (emp == null)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-person-x fs-1 text-secondary mb-3 d-block"></i>
+        <h2 class="dt-h2">No employee selected</h2>
+        <p class="text-secondary-dt mb-0">Select or register an employee to view their monthly attendance sheet.</p>
+    </div>
+}
+else
+{
+    <!-- Print Header -->
+    <div class="d-none d-print-block mb-3 border-bottom pb-2">
+        <h2 class="mb-0">D Tech Motors &mdash; Monthly Attendance Sheet</h2>
+        <div><strong>@emp.FullName</strong> (@emp.Role) &middot; @Model.MonthStart.ToString("MMMM yyyy")</div>
+    </div>
+
+    <!-- Monthly Summary KPIs -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-3">
+            <div class="dt-card p-3 h-100">
+                <div class="small text-secondary-dt text-uppercase">Days Worked</div>
+                <div class="fs-3 fw-bold text-white mt-1">@Model.DaysPresent</div>
+                <div class="small text-secondary-dt">in @Model.MonthStart.ToString("MMM yyyy")</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="dt-card p-3 h-100 @(Model.LateDays > 0 ? "border-warning" : "")">
+                <div class="small text-secondary-dt text-uppercase">Late Arrivals</div>
+                <div class="fs-3 fw-bold @(Model.LateDays > 0 ? "text-warning" : "text-success") mt-1">@Model.LateDays</div>
+                <div class="small text-secondary-dt">clock-in after 08:30 AM</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="dt-card p-3 h-100">
+                <div class="small text-secondary-dt text-uppercase">Total Hours</div>
+                <div class="fs-3 fw-bold text-white mt-1">@Model.TotalHours.ToString("0.00") <span class="fs-6 fw-normal text-secondary">hrs</span></div>
+                <div class="small text-secondary-dt">@Model.TotalRegularHours.ToString("0.00") regular hrs</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="dt-card p-3 h-100 @(Model.TotalOvertimeHours > 0 ? "border-info" : "")">
+                <div class="small text-secondary-dt text-uppercase">Overtime Hours</div>
+                <div class="fs-3 fw-bold @(Model.TotalOvertimeHours > 0 ? "text-info" : "text-secondary") mt-1">@Model.TotalOvertimeHours.ToString("0.00") <span class="fs-6 fw-normal text-secondary">hrs</span></div>
+                <div class="small text-secondary-dt">@Model.OvertimeDays overtime day@(Model.OvertimeDays == 1 ? "" : "s") (&gt;8h)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="d-flex flex-wrap gap-3 align-items-center small text-secondary-dt mb-3">
+        <span><span class="badge bg-warning text-dark me-1">Late</span> Clock-in after 08:30 AM</span>
+        <span><span class="badge bg-info text-dark me-1">Overtime</span> Worked more than 8.00 hrs/day</span>
+        <span><span class="badge bg-success-subtle text-success border border-success-subtle me-1">On Time</span> Normal shift</span>
+    </div>
+
+    <!-- Monthly Table -->
+    <div class="dt-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-dark align-middle mb-0 att-sheet-table">
+                <thead class="text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Date</th>
+                        <th>In</th>
+                        <th>Out</th>
+                        <th class="text-end">Hours Worked</th>
+                        <th class="ps-4 pe-4">Status &amp; Highlights</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Days)
+                    {
+                        var e = row.Entry;
+                        var isLate = e?.IsLate == true;
+                        var isOt = e?.IsOvertime == true;
+                        var rowClass = "";
+                        if (isLate && isOt) rowClass = "att-row-late-ot";
+                        else if (isLate) rowClass = "att-row-late";
+                        else if (isOt) rowClass = "att-row-ot";
+                        else if (row.IsSunday) rowClass = "att-row-off";
+
+                        <tr class="@rowClass">
+                            <td class="ps-4">
+                                <span class="fw-semibold text-white">@row.Date.ToString("dd MMM yyyy")</span>
+                                <span class="small text-secondary-dt ms-1">(@row.Date.ToString("ddd"))</span>
+                            </td>
+                            <td>
+                                @if (e?.ClockIn != null)
+                                {
+                                    <span class="@(isLate ? "text-warning fw-bold" : "text-white")">
+                                        @MockEmployeeData.FormatTime(e.ClockIn)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-secondary">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (e?.ClockOut != null)
+                                {
+                                    <span class="text-white">@MockEmployeeData.FormatTime(e.ClockOut)</span>
+                                }
+                                else if (e?.IsClockedIn == true)
+                                {
+                                    <span class="text-warning small fst-italic">Still on duty</span>
+                                }
+                                else
+                                {
+                                    <span class="text-secondary">—</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (e?.IsCompleted == true)
+                                {
+                                    <span class="fw-bold @(isOt ? "text-info" : "text-white")">
+                                        @e.HoursWorked.ToString("0.00") hrs
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-secondary">—</span>
+                                }
+                            </td>
+                            <td class="ps-4 pe-4">
+                                @if (e == null)
+                                {
+                                    if (row.IsSunday)
+                                    {
+                                        <span class="badge bg-dark border border-secondary text-secondary">Sunday / Off</span>
+                                    }
+                                    else if (row.IsFuture)
+                                    {
+                                        <span class="text-secondary small">Upcoming</span>
+                                    }
+                                    else if (row.Date.Date == DateTime.Today)
+                                    {
+                                        <span class="badge bg-secondary">Not clocked in yet</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Absent / Leave</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        @if (isLate)
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Late (+@e.LateMinutes min)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">On Time</span>
+                                        }
+
+                                        @if (isOt)
+                                        {
+                                            <span class="badge bg-info text-dark">
+                                                <i class="bi bi-lightning-charge-fill me-1"></i>Overtime (+@e.OvertimeHours.ToString("0.00")h)
+                                            </span>
+                                        }
+
+                                        @if (!e.IsCompleted)
+                                        {
+                                            <span class="badge bg-primary">On Duty</span>
+                                        }
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="border-top border-secondary">
+                    <tr class="fw-bold">
+                        <td class="ps-4 text-white">Monthly Total (@Model.DaysPresent days worked)</td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-end text-white">@Model.TotalHours.ToString("0.00") hrs</td>
+                        <td class="ps-4 pe-4">
+                            <span class="text-warning me-3">Late: @Model.LateDays</span>
+                            <span class="text-info">OT: @Model.TotalOvertimeHours.ToString("0.00") hrs</span>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+}
