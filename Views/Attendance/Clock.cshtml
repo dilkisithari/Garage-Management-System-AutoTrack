@@ -1,0 +1,238 @@
+@model ClockInOutViewModel
+@{
+    ViewData["Title"] = "Clock In / Out";
+    var emp = Model.SelectedEmployee;
+    var entry = Model.TodayEntry;
+    var isClockedIn = entry?.IsClockedIn == true;
+    var isCompleted = entry?.IsCompleted == true;
+    var clockInIso = isClockedIn && !isCompleted
+        ? DateTime.Today.Add(entry!.ClockIn!.Value).ToString("yyyy-MM-ddTHH:mm:ss")
+        : "";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Daily Timekeeping</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-stopwatch me-2 text-red"></i>Clock In / Out</h1>
+        <p class="text-secondary-dt mb-0">
+            Shift starts at <strong>08:30 AM</strong> &middot; Standard shift is <strong>@Model.StandardDailyHours.ToString("0") hours</strong> (overtime thereafter).
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        @if (emp != null)
+        {
+            <a asp-action="Sheet" asp-route-employeeId="@emp.Id" class="btn btn-outline-dt">
+                <i class="bi bi-calendar3-week me-1"></i>Attendance Sheet
+            </a>
+        }
+        @if (Model.CanSwitchEmployee)
+        {
+            <a asp-controller="Employees" asp-action="Index" class="btn btn-outline-dt">
+                <i class="bi bi-person-badge me-1"></i>Employees
+            </a>
+        }
+    </div>
+</div>
+
+@if (emp == null)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-person-exclamation fs-1 text-warning mb-3 d-block"></i>
+        <h2 class="dt-h2">No active employee profile found</h2>
+        <p class="text-secondary-dt mb-0">Ask the Owner or Front Desk to link your username to an active employee record.</p>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        <!-- Left: Live Clock & Big Action Buttons -->
+        <div class="col-lg-7">
+            <div class="dt-card p-4 p-lg-5 h-100 d-flex flex-column justify-content-between">
+                @if (Model.CanSwitchEmployee && Model.EmployeeOptions.Count > 0)
+                {
+                    <form method="get" asp-action="Clock" class="mb-4">
+                        <label for="employeeIdSelect" class="form-label text-secondary-dt">Select Staff Member</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                            <select id="employeeIdSelect" name="employeeId" class="form-select" onchange="this.form.submit()">
+                                @foreach (var opt in Model.EmployeeOptions)
+                                {
+                                    <option value="@opt.Id" selected="@(opt.Id == emp.Id)">
+                                        @opt.FullName — @opt.Role
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="d-flex align-items-center justify-content-between border-bottom border-secondary pb-3 mb-4">
+                        <div>
+                            <div class="text-secondary-dt small text-uppercase">Employee</div>
+                            <div class="fs-5 fw-bold text-white">@emp.FullName</div>
+                        </div>
+                        <span class="badge bg-dark border border-secondary text-light">@emp.Role</span>
+                    </div>
+                }
+
+                <!-- Live Digital Clock -->
+                <div class="att-clock-box text-center py-4 px-3 mb-4"
+                     data-server-now="@Model.ServerNow.ToString("yyyy-MM-ddTHH:mm:ss")"
+                     data-clockin-at="@clockInIso">
+                    <div id="live-clock-date" class="att-clock-date">@Model.ServerNow.ToString("dddd, dd MMMM yyyy")</div>
+                    <div id="live-clock-time" class="att-clock-time">@Model.ServerNow.ToString("hh:mm:ss tt")</div>
+                    @if (isClockedIn && !isCompleted)
+                    {
+                        <div class="mt-2 small text-success fw-semibold">
+                            <i class="bi bi-broadcast me-1"></i>On Duty &middot; Elapsed: <span id="live-elapsed">--:--:--</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Optional Note + Big Clock In / Clock Out Buttons -->
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label for="att-notes" class="form-label small text-secondary-dt">Shift Note (Optional)</label>
+                        <input id="att-notes" type="text" class="form-control" maxlength="200"
+                               placeholder="e.g. Morning bay prep, late due to parts pickup..."
+                               disabled="@isCompleted" />
+                    </div>
+                    <div class="col-sm-6">
+                        <form asp-action="ClockIn" method="post" class="att-clock-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="employeeId" value="@emp.Id" />
+                            <input type="hidden" name="notes" class="att-note-hidden" />
+                            <button type="submit"
+                                    class="btn att-btn att-btn-in w-100"
+                                    disabled="@isClockedIn">
+                                <i class="bi bi-box-arrow-in-right"></i>
+                                <span>Clock In</span>
+                                <small>@(isClockedIn ? "Already clocked in" : "Start today's shift")</small>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-sm-6">
+                        <form asp-action="ClockOut" method="post" class="att-clock-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="employeeId" value="@emp.Id" />
+                            <input type="hidden" name="notes" class="att-note-hidden" />
+                            <button type="submit"
+                                    class="btn att-btn att-btn-out w-100"
+                                    disabled="@(!isClockedIn || isCompleted)">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>Clock Out</span>
+                                <small>@(isCompleted ? "Shift completed" : (isClockedIn ? "End today's shift" : "Clock in first"))</small>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Today's Entry Card -->
+        <div class="col-lg-5">
+            <div class="dt-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="dt-h2 mb-0"><i class="bi bi-calendar-check me-2 text-red"></i>Today's Entry</h2>
+                    @if (isCompleted)
+                    {
+                        <span class="badge bg-success">Completed</span>
+                    }
+                    else if (isClockedIn)
+                    {
+                        <span class="badge bg-warning text-dark">On Duty</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Not Clocked In</span>
+                    }
+                </div>
+
+                <div class="p-3 rounded-3 bg-black border border-secondary mb-3">
+                    <div class="fw-bold text-white fs-5">@emp.FullName</div>
+                    <div class="text-secondary-dt small">@emp.Role &middot; LKR @emp.HourlyRate.ToString("N2")/hr</div>
+                </div>
+
+                <dl class="dt-summary-list mb-3">
+                    <div>
+                        <dt>Date</dt>
+                        <dd>@DateTime.Today.ToString("ddd, dd MMM yyyy")</dd>
+                    </div>
+                    <div>
+                        <dt>Clock In</dt>
+                        <dd>
+                            @if (isClockedIn)
+                            {
+                                <span>@MockEmployeeData.FormatTime(entry!.ClockIn)</span>
+                                @if (entry.IsLate)
+                                {
+                                    <span class="badge bg-warning text-dark ms-1">Late +@entry.LateMinutes min</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">On Time</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-secondary">—</span>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Clock Out</dt>
+                        <dd>
+                            @if (isCompleted)
+                            {
+                                <span>@MockEmployeeData.FormatTime(entry!.ClockOut)</span>
+                            }
+                            else
+                            {
+                                <span class="text-secondary">—</span>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Hours Worked</dt>
+                        <dd>
+                            @if (isCompleted)
+                            {
+                                <span class="fw-bold text-white">@entry!.HoursWorked.ToString("0.00") hrs</span>
+                                @if (entry.IsOvertime)
+                                {
+                                    <span class="badge bg-info text-dark ms-1">OT +@entry.OvertimeHours.ToString("0.00")h</span>
+                                }
+                            }
+                            else if (isClockedIn)
+                            {
+                                <span class="text-warning">In progress</span>
+                            }
+                            else
+                            {
+                                <span class="text-secondary">0.00 hrs</span>
+                            }
+                        </dd>
+                    </div>
+                </dl>
+
+                @if (!string.IsNullOrWhiteSpace(entry?.Notes))
+                {
+                    <div class="p-3 rounded bg-dark border border-secondary small text-secondary-dt mb-3">
+                        <strong class="text-white d-block mb-1">Notes</strong>
+                        @entry.Notes
+                    </div>
+                }
+
+                <div class="small text-secondary-dt border-top border-secondary pt-3">
+                    <div><i class="bi bi-exclamation-triangle text-warning me-1"></i>Arrivals after <strong>08:30 AM</strong> are flagged as Late.</div>
+                    <div class="mt-1"><i class="bi bi-lightning-charge text-info me-1"></i>Hours beyond <strong>8.00 hrs/day</strong> are counted as Overtime.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/attendance-clock.js" asp-append-version="true"></script>
+}

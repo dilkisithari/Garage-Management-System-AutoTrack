@@ -65,6 +65,24 @@
                 <div><strong>Service history</strong><span>Review completed work by vehicle</span></div>
             </a>
         </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="" asp-controller="Employees" asp-action="Index">
+                <i class="bi bi-person-badge"></i>
+                <div><strong>Employees</strong><span>Staff directory, roles &amp; hourly rates</span></div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="" asp-controller="Attendance" asp-action="Clock">
+                <i class="bi bi-stopwatch"></i>
+                <div><strong>Clock In / Out</strong><span>Record daily staff clock-in and clock-out</span></div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="" asp-controller="Attendance" asp-action="Sheet">
+                <i class="bi bi-calendar3-week"></i>
+                <div><strong>Attendance Sheet</strong><span>Monthly hours, late arrivals &amp; overtime</span></div>
+            </a>
+        </div>
         @if (role == "Owner")
         {
             <div class="col-md-6 col-xl-4">
@@ -74,6 +92,24 @@
                 </a>
             </div>
         }
+    </div>
+}
+
+@if (role == "Mechanic")
+{
+    <div class="row g-3">
+        <div class="col-md-6">
+            <a class="dt-quick" asp-area="" asp-controller="Attendance" asp-action="Clock">
+                <i class="bi bi-stopwatch"></i>
+                <div><strong>Clock In / Out</strong><span>Live shift clock and today's attendance entry</span></div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a class="dt-quick" asp-area="" asp-controller="Attendance" asp-action="Sheet">
+                <i class="bi bi-calendar3-week"></i>
+                <div><strong>My Attendance Sheet</strong><span>Monthly hours worked, late arrivals &amp; overtime</span></div>
+            </a>
+        </div>
     </div>
 }
 

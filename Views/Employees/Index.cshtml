@@ -1,0 +1,156 @@
+@model EmployeeListViewModel
+@{
+    ViewData["Title"] = "Employees";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Staff &amp; Workshop Team</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-person-badge me-2 text-red"></i>Employees</h1>
+        <p class="text-secondary-dt mb-0">
+            @Model.TotalCount staff member@(Model.TotalCount == 1 ? "" : "s")
+            &middot; <span class="text-success">@Model.ActiveCount active</span>
+            @if (Model.InactiveCount > 0)
+            {
+                <span>&middot; <span class="text-secondary">@Model.InactiveCount inactive</span></span>
+            }
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-controller="Attendance" asp-action="Clock" class="btn btn-outline-dt">
+            <i class="bi bi-stopwatch me-1"></i>Clock In / Out
+        </a>
+        <a asp-controller="Attendance" asp-action="Sheet" class="btn btn-outline-dt">
+            <i class="bi bi-calendar3-week me-1"></i>Attendance Sheet
+        </a>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add Employee
+        </a>
+    </div>
+</div>
+
+<!-- Search & Status Toolbar -->
+<div class="dt-card dt-toolbar mb-4 p-3">
+    <form method="get" asp-action="Index" class="row g-2 align-items-center">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input name="search" type="search" value="@Model.Search"
+                       class="form-control"
+                       placeholder="Search by name, role or phone..." />
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select name="status" class="form-select" aria-label="Filter by status">
+                <option value="" selected="@(string.IsNullOrEmpty(Model.Status))">All statuses (@Model.TotalCount)</option>
+                <option value="active" selected="@(Model.Status == "active")">Active (@Model.ActiveCount)</option>
+                <option value="inactive" selected="@(Model.Status == "inactive")">Inactive (@Model.InactiveCount)</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
+            <a asp-action="Index" class="btn btn-outline-dt" title="Reset filters">
+                <i class="bi bi-x-circle"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Employee Directory Table -->
+@if (Model.Items.Count == 0)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-person-badge fs-1 text-secondary mb-3 d-block"></i>
+        <h4 class="text-white">No employees found</h4>
+        <p class="text-secondary-dt mb-3">
+            @(string.IsNullOrWhiteSpace(Model.Search) && string.IsNullOrWhiteSpace(Model.Status)
+                ? "No staff records added yet."
+                : "No employees match your current search or filter.")
+        </p>
+        <a asp-action="Index" class="btn btn-outline-dt btn-sm">Clear filters</a>
+    </div>
+}
+else
+{
+    <div class="dt-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead class="text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Name</th>
+                        <th>Role</th>
+                        <th class="text-end">Hourly Rate</th>
+                        <th>Phone</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var emp in Model.Items)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-white">@emp.FullName</div>
+                                <small class="text-secondary-dt">
+                                    Joined @emp.JoinedDate.ToString("MMM yyyy")
+                                    @if (!string.IsNullOrWhiteSpace(emp.Username))
+                                    {
+                                        <span>&middot; <code>@@@emp.Username</code></span>
+                                    }
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-dark border border-secondary text-light">@emp.Role</span>
+                            </td>
+                            <td class="text-end fw-semibold text-white">
+                                LKR @emp.HourlyRate.ToString("N2")<span class="text-secondary small fw-normal">/hr</span>
+                            </td>
+                            <td>
+                                <a href="tel:@emp.Phone" class="text-white text-decoration-none">
+                                    <i class="bi bi-telephone me-1 text-red"></i>@emp.Phone
+                                </a>
+                            </td>
+                            <td class="text-center">
+                                @if (emp.IsActive)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactive</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Edit" asp-route-id="@emp.Id"
+                                       class="btn btn-outline-dt" title="Edit employee">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a asp-controller="Attendance" asp-action="Sheet" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-outline-dt" title="Monthly attendance sheet">
+                                        <i class="bi bi-calendar3-week"></i>
+                                    </a>
+                                    @if (emp.IsActive)
+                                    {
+                                        <a asp-controller="Attendance" asp-action="Clock" asp-route-employeeId="@emp.Id"
+                                           class="btn btn-outline-dt" title="Clock in / out">
+                                            <i class="bi bi-stopwatch"></i>
+                                        </a>
+                                    }
+                                    <form asp-action="SetActive" asp-route-id="@emp.Id" asp-route-isActive="@(!emp.IsActive)" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="btn @(emp.IsActive ? "btn-outline-warning" : "btn-outline-success")"
+                                                title="@(emp.IsActive ? "Deactivate" : "Activate")">
+                                            <i class="bi @(emp.IsActive ? "bi-person-slash" : "bi-person-check")"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

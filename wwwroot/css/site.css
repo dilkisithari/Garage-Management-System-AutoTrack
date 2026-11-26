@@ -284,3 +284,82 @@ h1, h2, h3, h4, h5, h6, .dt-display, .dt-h1, .dt-h2 { font-family: var(--dt-font
 .dt-summary-total { border-bottom: 0 !important; padding-top: 1rem !important; }
 .dt-summary-total dt { color: #fff; font-family: var(--dt-font-head); font-size: 1.1rem; font-weight: 700; }
 .dt-summary-total dd { color: var(--dt-red); font-family: var(--dt-font-head); font-size: 1.35rem; font-weight: 800; }
+
+/* ---------- Option 8: Employees & Attendance ---------- */
+.att-clock-box {
+    background: radial-gradient(circle at center, rgba(229, 9, 20, .12), var(--dt-black) 70%);
+    border: 1px solid var(--dt-gray-700);
+    border-radius: var(--dt-radius);
+}
+.att-clock-date { color: var(--dt-gray-400); font-size: .95rem; letter-spacing: .4px; margin-bottom: .25rem; }
+.att-clock-time {
+    font-family: var(--dt-font-head);
+    font-weight: 800;
+    font-size: clamp(2.1rem, 4.5vw, 3.25rem);
+    letter-spacing: 1.5px;
+    color: #fff;
+    line-height: 1.1;
+}
+
+.att-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+    padding: 1.4rem 1rem;
+    border-radius: var(--dt-radius);
+    border: 2px solid transparent;
+    transition: transform .15s, box-shadow .15s, opacity .15s;
+}
+.att-btn i { font-size: 2rem; line-height: 1; }
+.att-btn span { font-family: var(--dt-font-head); font-size: 1.25rem; font-weight: 800; }
+.att-btn small { font-family: var(--dt-font-body); font-size: .78rem; font-weight: 500; opacity: .88; }
+
+.att-btn-in {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    border-color: #22c55e;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(34, 197, 94, .28);
+}
+.att-btn-in:hover:not(:disabled) { transform: translateY(-2px); color: #fff; background: linear-gradient(135deg, #22c55e, #16a34a); }
+
+.att-btn-out {
+    background: linear-gradient(135deg, var(--dt-red), var(--dt-red-dark));
+    border-color: var(--dt-red);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(229, 9, 20, .28);
+}
+.att-btn-out:hover:not(:disabled) { transform: translateY(-2px); color: #fff; background: linear-gradient(135deg, #ff1e29, var(--dt-red)); }
+
+.att-btn:disabled {
+    background: var(--dt-black);
+    border-color: var(--dt-gray-700);
+    color: var(--dt-gray-400);
+    box-shadow: none;
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.att-sheet-table tbody tr.att-row-late {
+    background-color: rgba(250, 204, 21, .08);
+    box-shadow: inset 4px 0 0 var(--dt-warning);
+}
+.att-sheet-table tbody tr.att-row-ot {
+    background-color: rgba(59, 130, 246, .08);
+    box-shadow: inset 4px 0 0 var(--dt-info);
+}
+.att-sheet-table tbody tr.att-row-late-ot {
+    background-color: rgba(250, 204, 21, .1);
+    box-shadow: inset 4px 0 0 var(--dt-warning), inset -4px 0 0 var(--dt-info);
+}
+.att-sheet-table tbody tr.att-row-off { opacity: .65; }
+
+@media print {
+    .att-sheet-table { --bs-table-bg: #fff; --bs-table-color: #000; }
+    .att-sheet-table td, .att-sheet-table th { color: #000 !important; border-color: #ddd !important; }
+    .att-sheet-table .text-white { color: #000 !important; }
+    .att-sheet-table .text-secondary-dt, .att-sheet-table .text-secondary { color: #555 !important; }
+    .att-sheet-table tbody tr.att-row-late { background-color: #fff8db !important; }
+    .att-sheet-table tbody tr.att-row-ot { background-color: #e7f1ff !important; }
+}
