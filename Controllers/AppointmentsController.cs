@@ -1,15 +1,20 @@
 using System.Security.Claims;
+using AutoTrack.Data;
 using AutoTrack.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoTrack.Controllers;
 
-public class AppointmentsController : Controller
+public class AppointmentsController(
+    AutoTrackDbContext db,
+    UserManager<AutoTrackUser> users) : Controller
 {
     // GET: /Appointments/Book
     [AllowAnonymous, HttpGet]
-    public IActionResult Book(string? date = null, string? slot = null)
+    public async Task<IActionResult> Book(string? date = null, string? slot = null)
     {
         var model = new AppointmentBookingViewModel();
 
@@ -28,32 +33,32 @@ public class AppointmentsController : Controller
             model.TimeSlot = slot;
         }
 
-        PopulateFormHelpers(model);
+        await PopulateFormHelpersAsync(model);
 
         // Pre-fill user information if customer is logged in
         if (User.Identity?.IsAuthenticated == true)
         {
-            var fullName = User.FindFirst("FullName")?.Value ?? User.Identity.Name ?? "";
+            var user = await users.GetUserAsync(User);
+            var fullName = user?.FullName ?? User.Identity.Name ?? "";
             model.CustomerName = fullName;
-            model.CustomerEmail = User.Identity.Name?.Contains("@") == true ? User.Identity.Name : "";
+            model.CustomerEmail = user?.Email ?? "";
 
-            // Suggest customer's known vehicles from existing mock job/invoice history
-            var userVehicles = MockJobData.All()
-                .Where(j => string.Equals(j.CustomerName, fullName, StringComparison.OrdinalIgnoreCase))
-                .Select(j => j.VehicleNo)
-                .Distinct()
-                .ToList();
-
-            if (userVehicles.Count == 0 && string.Equals(fullName, "Kasun Silva", StringComparison.OrdinalIgnoreCase))
-            {
-                userVehicles.Add("CAB-1234");
-            }
+            var userVehicles = user == null
+                ? new List<string>()
+                : await db.CustomerVehicles.AsNoTracking()
+                    .Where(vehicle => vehicle.CustomerId == user.Id)
+                    .Select(vehicle => vehicle.VehicleNo)
+                    .Distinct()
+                    .ToListAsync();
 
             model.ExistingVehicles = userVehicles;
             if (userVehicles.Count > 0)
             {
                 model.VehicleNo = userVehicles.First();
-                model.VehicleModel = "Mitsubishi Montero Sport 2018";
+                model.VehicleModel = await db.CustomerVehicles.AsNoTracking()
+                    .Where(vehicle => vehicle.CustomerId == user!.Id && vehicle.VehicleNo == userVehicles.First())
+                    .Select(vehicle => vehicle.Model)
+                    .FirstOrDefaultAsync();
             }
         }
 
@@ -62,7 +67,7 @@ public class AppointmentsController : Controller
 
     // POST: /Appointments/Book
     [AllowAnonymous, HttpPost, ValidateAntiForgeryToken]
-    public IActionResult Book(AppointmentBookingViewModel model)
+    public async Task<IActionResult> Book(AppointmentBookingViewModel model)
     {
         if (model.AppointmentDate.Date < DateTime.Today)
         {
@@ -74,10 +79,18 @@ public class AppointmentsController : Controller
         {
             ModelState.AddModelError(nameof(model.TimeSlot), "This time slot is already booked. Please choose another slot.");
         }
+        else if (!string.IsNullOrWhiteSpace(model.TimeSlot) &&
+                 await db.CustomerAppointments.AnyAsync(appointment =>
+                     appointment.AppointmentDate == model.AppointmentDate.Date &&
+                     appointment.TimeSlot == model.TimeSlot.Trim() &&
+                     appointment.Status != "Cancelled"))
+        {
+            ModelState.AddModelError(nameof(model.TimeSlot), "This time slot is already booked. Please choose another slot.");
+        }
 
         if (!ModelState.IsValid)
         {
-            PopulateFormHelpers(model);
+            await PopulateFormHelpersAsync(model);
             return View(model);
         }
 
@@ -95,9 +108,51 @@ public class AppointmentsController : Controller
             Status = "Pending",
             CreatedAt = DateTime.Now
         };
+        appointment.AppointmentNo = $"APT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..25];
+
+        var customer = User.Identity?.IsAuthenticated == true && User.IsInRole("Customer")
+            ? await users.GetUserAsync(User)
+            : null;
+        var normalizedVehicleNo = appointment.VehicleNo.ToUpperInvariant();
+        var vehicle = customer == null
+            ? null
+            : await db.CustomerVehicles.SingleOrDefaultAsync(
+                item => item.VehicleNo == normalizedVehicleNo);
+        if (vehicle != null && vehicle.CustomerId != customer!.Id)
+        {
+            ModelState.AddModelError(nameof(model.VehicleNo), "That vehicle is registered to another customer.");
+            await PopulateFormHelpersAsync(model);
+            return View(model);
+        }
+
+        if (customer != null)
+        {
+            if (vehicle == null)
+            {
+                vehicle = new CustomerVehicle
+                {
+                    VehicleNo = normalizedVehicleNo,
+                    Model = appointment.VehicleModel,
+                    CustomerId = customer.Id
+                };
+                db.CustomerVehicles.Add(vehicle);
+            }
+
+            db.CustomerAppointments.Add(new CustomerAppointment
+            {
+                AppointmentNo = appointment.AppointmentNo,
+                CustomerId = customer.Id,
+                Vehicle = vehicle,
+                ServiceType = appointment.ServiceType,
+                AppointmentDate = appointment.AppointmentDate,
+                TimeSlot = appointment.TimeSlot,
+                Status = appointment.Status,
+                CreatedAt = appointment.CreatedAt
+            });
+            await db.SaveChangesAsync();
+        }
 
         MockAppointmentData.Save(appointment);
-
         TempData["Success"] = $"Booking request received! Your reference is {appointment.AppointmentNo}.";
         return RedirectToAction(nameof(Confirmation), new { id = appointment.Id });
     }
@@ -118,7 +173,7 @@ public class AppointmentsController : Controller
 
     // GET: /Appointments/GetBookedSlots?date=2026-11-20
     [AllowAnonymous, HttpGet]
-    public IActionResult GetBookedSlots(string? date)
+    public async Task<IActionResult> GetBookedSlots(string? date)
     {
         if (!DateTime.TryParse(date, out var parsedDate))
         {
@@ -126,31 +181,63 @@ public class AppointmentsController : Controller
         }
 
         var booked = MockAppointmentData.GetBookedSlots(parsedDate.Date);
+        booked.AddRange(await db.CustomerAppointments.AsNoTracking()
+            .Where(appointment =>
+                appointment.AppointmentDate == parsedDate.Date &&
+                appointment.Status != "Cancelled")
+            .Select(appointment => appointment.TimeSlot)
+            .ToListAsync());
+        booked = booked.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         return Json(new { success = true, date = parsedDate.ToString("yyyy-MM-dd"), bookedSlots = booked });
     }
 
     // GET: /Appointments/My
     [Authorize, HttpGet]
-    public IActionResult My()
+    public async Task<IActionResult> My()
     {
-        var fullName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "";
-        var email = User.Identity?.Name ?? "";
+        var customerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var customer = await users.GetUserAsync(User);
+        if (customer == null || customerId == null)
+            return Forbid();
 
-        var appointments = MockAppointmentData.All()
-            .Where(a =>
-                string.Equals(a.CustomerName, fullName, StringComparison.OrdinalIgnoreCase) ||
-                (!string.IsNullOrEmpty(a.CustomerEmail) && string.Equals(a.CustomerEmail, email, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
+        var appointments = await db.CustomerAppointments.AsNoTracking()
+            .Where(appointment => appointment.CustomerId == customerId)
+            .OrderByDescending(appointment => appointment.AppointmentDate)
+            .Select(appointment => new AppointmentViewModel
+            {
+                Id = appointment.Id,
+                AppointmentNo = appointment.AppointmentNo,
+                CustomerName = customer.FullName,
+                CustomerPhone = customer.PhoneNumber ?? "",
+                CustomerEmail = customer.Email,
+                VehicleNo = appointment.Vehicle.VehicleNo,
+                VehicleModel = appointment.Vehicle.Model,
+                ServiceType = appointment.ServiceType,
+                AppointmentDate = appointment.AppointmentDate,
+                TimeSlot = appointment.TimeSlot,
+                Status = appointment.Status,
+                CreatedAt = appointment.CreatedAt
+            })
+            .ToListAsync();
 
-        ViewBag.CustomerName = fullName;
+        ViewBag.CustomerName = customer.FullName;
         return View(appointments);
     }
 
-    private static void PopulateFormHelpers(AppointmentBookingViewModel model)
+    private async Task PopulateFormHelpersAsync(AppointmentBookingViewModel model)
     {
         model.AvailableServiceTypes = MockAppointmentData.ServiceTypes.ToList();
         model.AllTimeSlots = MockAppointmentData.TimeSlots.ToList();
         model.BookedSlotsForDate = MockAppointmentData.GetBookedSlots(model.AppointmentDate);
+        model.BookedSlotsForDate.AddRange(await db.CustomerAppointments.AsNoTracking()
+            .Where(appointment =>
+                appointment.AppointmentDate == model.AppointmentDate.Date &&
+                appointment.Status != "Cancelled")
+            .Select(appointment => appointment.TimeSlot)
+            .ToListAsync());
+        model.BookedSlotsForDate = model.BookedSlotsForDate
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }
 

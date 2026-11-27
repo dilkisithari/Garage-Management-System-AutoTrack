@@ -72,7 +72,8 @@ public static class MockAppointmentData
             if (model.Id == 0)
             {
                 model.Id = Appointments.Count == 0 ? 1 : Appointments.Max(a => a.Id) + 1;
-                model.AppointmentNo = $"APT-2026-{model.Id:000}";
+                if (string.IsNullOrWhiteSpace(model.AppointmentNo))
+                    model.AppointmentNo = $"APT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..25];
                 model.CreatedAt = DateTime.Now;
                 Appointments.Add(Clone(model));
             }

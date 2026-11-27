@@ -1,65 +1,85 @@
+using System.Security.Claims;
+using System.Text.Json;
+using AutoTrack.Data;
 using AutoTrack.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoTrack.Controllers;
 
 [Authorize]
-public class ServiceHistoryController : Controller
+public class ServiceHistoryController(AutoTrackDbContext db) : Controller
 {
     [HttpGet]
-    public IActionResult Index(string? vehicleNo)
+    public async Task<IActionResult> Index(string? vehicleNo)
     {
-        var jobs = MockJobData.All();
+        var customerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var vehiclesQuery = db.CustomerVehicles.AsNoTracking().AsQueryable();
         if (User.IsInRole("Customer"))
-        {
-            var customerName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "";
-            jobs = jobs.Where(job =>
-                string.Equals(job.CustomerName, customerName, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
+            vehiclesQuery = vehiclesQuery.Where(vehicle => vehicle.CustomerId == customerId);
 
         if (string.IsNullOrWhiteSpace(vehicleNo))
         {
-            return View(new ServiceHistoryViewModel
-            {
-                Vehicles = jobs
-                    .GroupBy(job => job.VehicleNo, StringComparer.OrdinalIgnoreCase)
-                    .Select(group => new CustomerVehicleViewModel
-                    {
-                        VehicleNo = group.Key,
-                        VehicleModel = "Vehicle on file"
-                    })
-                    .OrderBy(vehicle => vehicle.VehicleNo)
-                    .ToList()
-            });
+            var vehicles = await vehiclesQuery
+                .OrderBy(vehicle => vehicle.VehicleNo)
+                .Select(vehicle => new CustomerVehicleViewModel
+                {
+                    VehicleNo = vehicle.VehicleNo,
+                    VehicleModel = vehicle.Model ?? "Vehicle on file"
+                })
+                .ToListAsync();
+
+            return View(new ServiceHistoryViewModel { Vehicles = vehicles });
         }
 
-        var vehicleJobs = jobs.Where(job =>
-            string.Equals(job.VehicleNo, vehicleNo.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
-        if (vehicleJobs.Count == 0)
+        var normalizedVehicleNo = vehicleNo.Trim().ToUpperInvariant();
+        var vehicle = await vehiclesQuery.SingleOrDefaultAsync(item => item.VehicleNo == normalizedVehicleNo);
+        if (vehicle == null)
+            return NotFound();
+
+        var records = await db.ServiceJobs.AsNoTracking()
+            .Where(job => job.VehicleNo == normalizedVehicleNo && job.Status == "Completed")
+            .OrderByDescending(job => job.DateOpened)
+            .ToListAsync();
+
+        var jobs = records.Select(record =>
         {
-            if (!User.IsInRole("Customer"))
-                return NotFound();
-
-            var customerName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "";
-            var email = User.Identity?.Name ?? "";
-            var hasAppointment = MockAppointmentData.All().Any(appointment =>
-                string.Equals(appointment.VehicleNo, vehicleNo.Trim(), StringComparison.OrdinalIgnoreCase) &&
-                (string.Equals(appointment.CustomerName, customerName, StringComparison.OrdinalIgnoreCase) ||
-                 (!string.IsNullOrEmpty(appointment.CustomerEmail) &&
-                  string.Equals(appointment.CustomerEmail, email, StringComparison.OrdinalIgnoreCase))));
-            if (!hasAppointment) return NotFound();
-
-            return View(new ServiceHistoryViewModel { VehicleNo = vehicleNo.Trim() });
-        }
+            var parts = JsonSerializer.Deserialize<List<ServiceHistoryPart>>(record.PartsJson) ?? new();
+            var partsTotal = parts.Sum(part => part.Quantity);
+            return new JobCardViewModel
+            {
+                JobNo = record.JobNo,
+                VehicleNo = record.VehicleNo,
+                DateOpened = record.DateOpened,
+                Complaint = record.Complaint,
+                Status = record.Status,
+                Tasks = string.IsNullOrWhiteSpace(record.WorkDone)
+                    ? new()
+                    : record.WorkDone.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(description => new JobTaskItem { Description = description, Done = true })
+                        .ToList(),
+                Parts = parts.Select(part => new JobPartItem
+                {
+                    PartName = part.PartName,
+                    Quantity = part.Quantity,
+                    UnitPrice = part.UnitPrice
+                }).ToList(),
+                Labour = (JsonSerializer.Deserialize<List<ServiceHistoryLabour>>(record.LabourJson) ?? new())
+                    .Select(labour => new JobLabourItem
+                    {
+                        Description = labour.Description,
+                        Hours = labour.Hours,
+                        Rate = labour.Rate
+                    })
+                    .ToList()
+            };
+        }).ToList();
 
         return View(new ServiceHistoryViewModel
         {
-            VehicleNo = vehicleJobs[0].VehicleNo,
-            Jobs = vehicleJobs
-                .Where(job => string.Equals(job.Status, "Completed", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(job => job.DateOpened)
-                .ToList()
+            VehicleNo = vehicle.VehicleNo,
+            Jobs = jobs
         });
     }
 }

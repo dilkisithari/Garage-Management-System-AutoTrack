@@ -14,7 +14,8 @@ public static class MockAuditLog
                 At = DateTime.Now,
                 Username = username,
                 Action = action,
-                Details = details
+                Details = details,
+                TableName = "APPLICATION"
             });
         }
     }
@@ -29,6 +30,7 @@ public static class MockAuditLog
                     At = entry.At,
                     Username = entry.Username,
                     Action = entry.Action,
+                    TableName = entry.TableName,
                     Details = entry.Details
                 })
                 .ToList();

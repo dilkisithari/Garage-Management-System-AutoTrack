@@ -26,7 +26,8 @@ public static class MockJobData
             if (job.Id == 0)
             {
                 job.Id = Jobs.Count == 0 ? 1 : Jobs.Max(j => j.Id) + 1;
-                job.JobNo = $"JC-{job.Id:000}";
+                if (string.IsNullOrWhiteSpace(job.JobNo))
+                    job.JobNo = $"JC-{Guid.NewGuid():N}"[..15].ToUpperInvariant();
                 Jobs.Add(job);
             }
             else

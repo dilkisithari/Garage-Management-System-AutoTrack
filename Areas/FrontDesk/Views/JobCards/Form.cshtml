@@ -141,9 +141,11 @@
                     <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check2-circle me-1"></i>@(isNew ? "Create job card" : "Save changes")</button>
                     @if (!isNew)
                     {
-                        <a asp-area="FrontDesk" asp-controller="Invoices" asp-action="CreateFromJob" asp-route-jobCardId="@Model.Id" class="btn btn-outline-dt">
+                        <button type="submit"
+                                formaction="@Url.Action("CreateFromJob", "Invoices", new { area = "FrontDesk", jobCardId = Model.Id })"
+                                formmethod="post" formnovalidate class="btn btn-outline-dt">
                             <i class="bi bi-receipt me-1"></i>Generate / View Invoice
-                        </a>
+                        </button>
                     }
                     <a asp-action="Board" class="btn btn-outline-secondary">Cancel</a>
                 </div>

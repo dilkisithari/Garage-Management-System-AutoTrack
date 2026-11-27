@@ -34,7 +34,7 @@ public class RegisterViewModel
     public string Email { get; set; } = "";
 
     [Required(ErrorMessage = "Choose a password.")]
-    [StringLength(60, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters.")]
+    [StringLength(100, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters.")]
     [DataType(DataType.Password)]
     public string Password { get; set; } = "";
 
@@ -53,7 +53,7 @@ public class ChangePasswordViewModel
     public string OldPassword { get; set; } = "";
 
     [Required(ErrorMessage = "Enter a new password.")]
-    [StringLength(60, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters.")]
+    [StringLength(100, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters.")]
     [DataType(DataType.Password)]
     [Display(Name = "New password")]
     public string NewPassword { get; set; } = "";

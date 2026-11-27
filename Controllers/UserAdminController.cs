@@ -1,132 +1,225 @@
+using AutoTrack.Data;
 using AutoTrack.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoTrack.Controllers;
 
 [Authorize(Roles = "Owner")]
-public class UserAdminController : Controller
+public class UserAdminController(
+    AutoTrackDbContext db,
+    UserManager<AutoTrackUser> users,
+    RoleManager<IdentityRole> roles) : Controller
 {
-    private static readonly string[] Roles = { "Owner", "FrontDesk", "Mechanic", "Customer" };
+    private static readonly string[] AvailableRoles = { "Owner", "FrontDesk", "Mechanic", "Customer" };
 
     [HttpGet]
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
         SetRoles();
-        return View(new UserAdminIndexViewModel { Users = MockUserStore.All() });
+        return View(await BuildIndexModelAsync());
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public IActionResult Create([Bind(Prefix = "NewUser")] CreateManagedUserViewModel model)
+    public async Task<IActionResult> Create([Bind(Prefix = "NewUser")] CreateManagedUserViewModel model)
     {
-        if (!Roles.Contains(model.Role, StringComparer.Ordinal))
+        if (!AvailableRoles.Contains(model.Role, StringComparer.Ordinal))
             ModelState.AddModelError("NewUser.Role", "Select a valid role.");
-
         if (!ModelState.IsValid)
-            return ShowIndex(model);
+            return await ShowIndexAsync(model);
 
-        var user = new MockUser
+        var username = model.Username.Trim();
+        var user = new AutoTrackUser
         {
-            Username = model.Username.Trim(),
-            Password = model.Password,
+            UserName = username,
+            Email = username.Contains('@') ? username : null,
+            EmailConfirmed = username.Contains('@'),
             FullName = model.FullName.Trim(),
-            Phone = model.Phone?.Trim(),
-            Role = model.Role,
+            PhoneNumber = model.Phone?.Trim(),
             IsActive = true
         };
-        if (!MockUserStore.Add(user))
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var created = await users.CreateAsync(user, model.Password);
+        if (!created.Succeeded)
         {
-            ModelState.AddModelError("NewUser.Username", "A user with this username already exists.");
-            return ShowIndex(model);
+            AddIdentityErrors(created, "NewUser.Username");
+            return await ShowIndexAsync(model);
         }
 
-        MockAuditLog.Add(CurrentUsername, "User created", $"Created {user.Username} with role {user.Role}.");
-        TempData["Success"] = $"User '{user.Username}' created.";
+        var assigned = await users.AddToRoleAsync(user, model.Role);
+        if (!assigned.Succeeded)
+        {
+            AddIdentityErrors(assigned, "NewUser.Role");
+            return await ShowIndexAsync(model);
+        }
+
+        await transaction.CommitAsync();
+        TempData["Success"] = $"User '{username}' created.";
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public IActionResult UpdateRole(string username, string role)
+    public async Task<IActionResult> UpdateRole(string username, string role)
     {
         if (string.IsNullOrWhiteSpace(username))
             return AdminError("Select a user.");
-        if (!Roles.Contains(role, StringComparer.Ordinal))
+        if (!AvailableRoles.Contains(role, StringComparer.Ordinal) || !await roles.RoleExistsAsync(role))
             return AdminError("Select a valid role.");
 
-        if (string.Equals(username, CurrentUsername, StringComparison.OrdinalIgnoreCase))
+        var user = await FindUserAsync(username);
+        if (user == null)
+            return NotFound();
+        if (string.Equals(user.Id, CurrentUserId, StringComparison.Ordinal))
             return AdminError("You cannot change your own role.");
 
-        var user = MockUserStore.Get(username);
-        if (user == null) return NotFound();
-        if (user.Role == role)
+        var previousRoles = await users.GetRolesAsync(user);
+        if (previousRoles.Count == 1 && string.Equals(previousRoles[0], role, StringComparison.Ordinal))
             return RedirectToAction(nameof(Index));
-
-        if (!MockUserStore.UpdateRole(username, role))
+        if (previousRoles.Contains("Owner") && role != "Owner" && await IsLastActiveOwnerAsync(user))
             return AdminError("The last active owner cannot be removed.");
 
-        MockAuditLog.Add(CurrentUsername, "Role changed", $"Changed {username} from {user.Role} to {role}.");
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var removed = await users.RemoveFromRolesAsync(user, previousRoles);
+        if (!removed.Succeeded)
+            return IdentityError(removed);
+        var added = await users.AddToRoleAsync(user, role);
+        if (!added.Succeeded)
+            return IdentityError(added);
+        var stamp = await users.UpdateSecurityStampAsync(user);
+        if (!stamp.Succeeded)
+            return IdentityError(stamp);
+
+        await transaction.CommitAsync();
         TempData["Success"] = $"Role for '{username}' updated.";
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public IActionResult SetActive(string username, bool isActive)
+    public async Task<IActionResult> SetActive(string username, bool isActive)
     {
         if (string.IsNullOrWhiteSpace(username))
             return AdminError("Select a user.");
-        if (!isActive && string.Equals(username, CurrentUsername, StringComparison.OrdinalIgnoreCase))
-            return AdminError("You cannot deactivate your own account.");
 
-        var user = MockUserStore.Get(username);
-        if (user == null) return NotFound();
+        var user = await FindUserAsync(username);
+        if (user == null)
+            return NotFound();
         if (user.IsActive == isActive)
             return RedirectToAction(nameof(Index));
-
-        if (!MockUserStore.SetActive(username, isActive))
+        if (!isActive && string.Equals(user.Id, CurrentUserId, StringComparison.Ordinal))
+            return AdminError("You cannot deactivate your own account.");
+        if (!isActive && await IsLastActiveOwnerAsync(user))
             return AdminError("The last active owner cannot be deactivated.");
 
-        var action = isActive ? "User activated" : "User deactivated";
-        MockAuditLog.Add(CurrentUsername, action, $"{username} was {(isActive ? "activated" : "deactivated")}.");
+        user.IsActive = isActive;
+        var result = await users.UpdateAsync(user);
+        if (!result.Succeeded)
+            return IdentityError(result);
+        var stamp = await users.UpdateSecurityStampAsync(user);
+        if (!stamp.Succeeded)
+            return IdentityError(stamp);
+
         TempData["Success"] = $"User '{username}' {(isActive ? "activated" : "deactivated")}.";
         return RedirectToAction(nameof(Index));
     }
 
     [HttpGet]
-    public IActionResult AuditLog(string? username, DateTime? date, string? action)
+    public async Task<IActionResult> AuditLog(string? username, DateTime? date, string? action)
     {
-        var entries = MockAuditLog.All();
+        var query = db.AuditLogs.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(username))
+            query = query.Where(entry => entry.ActorUsername == username);
+        if (date.HasValue)
+        {
+            var start = date.Value.Date;
+            query = query.Where(entry => entry.OccurredAt >= start && entry.OccurredAt < start.AddDays(1));
+        }
+        if (!string.IsNullOrWhiteSpace(action))
+            query = query.Where(entry => entry.Action == action.ToUpperInvariant());
+
+        var entries = await query.OrderByDescending(entry => entry.OccurredAt)
+            .Take(500)
+            .Select(entry => new AuditLogEntry
+            {
+                At = entry.OccurredAt,
+                Username = entry.ActorUsername,
+                Action = entry.Action,
+                TableName = entry.TableName,
+                OldValues = entry.OldValues,
+                NewValues = entry.NewValues
+            })
+            .ToListAsync();
         var model = new AuditLogViewModel
         {
-            Users = MockUserStore.All().Select(user => user.Username).ToList(),
-            Actions = entries.Select(entry => entry.Action).Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(name => name).ToList(),
+            Users = await users.Users.Select(user => user.UserName!).Distinct().OrderBy(name => name).ToListAsync(),
+            Actions = await db.AuditLogs.Select(entry => entry.Action).Distinct().OrderBy(name => name).ToListAsync(),
             SelectedUser = username,
             SelectedDate = date,
             SelectedAction = action,
             Entries = entries
-                .Where(entry => string.IsNullOrEmpty(username) ||
-                                string.Equals(entry.Username, username, StringComparison.OrdinalIgnoreCase))
-                .Where(entry => !date.HasValue || entry.At.Date == date.Value.Date)
-                .Where(entry => string.IsNullOrEmpty(action) ||
-                                string.Equals(entry.Action, action, StringComparison.OrdinalIgnoreCase))
-                .ToList()
         };
         return View(model);
     }
 
-    private string CurrentUsername => User.Identity?.Name ?? "";
+    private string? CurrentUserId => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-    private IActionResult ShowIndex(CreateManagedUserViewModel model)
+    private async Task<UserAdminIndexViewModel> BuildIndexModelAsync(CreateManagedUserViewModel? createUser = null)
     {
-        SetRoles();
-        return View("Index", new UserAdminIndexViewModel
+        var accounts = await users.Users.AsNoTracking().OrderBy(user => user.FullName).ToListAsync();
+        var userModels = new List<ManagedUserViewModel>(accounts.Count);
+        foreach (var account in accounts)
         {
-            Users = MockUserStore.All(),
-            NewUser = model
-        });
+            var assignedRoles = await users.GetRolesAsync(account);
+            userModels.Add(new ManagedUserViewModel
+            {
+                Id = account.Id,
+                Username = account.UserName ?? account.Email ?? "",
+                FullName = account.FullName,
+                Phone = account.PhoneNumber,
+                Role = assignedRoles.FirstOrDefault() ?? "",
+                IsActive = account.IsActive
+            });
+        }
+
+        return new UserAdminIndexViewModel
+        {
+            Users = userModels,
+            NewUser = createUser ?? new CreateManagedUserViewModel()
+        };
     }
 
-    private void SetRoles() => ViewBag.Roles = Roles;
+    private async Task<IActionResult> ShowIndexAsync(CreateManagedUserViewModel model)
+    {
+        SetRoles();
+        return View("Index", await BuildIndexModelAsync(model));
+    }
+
+    private async Task<AutoTrackUser?> FindUserAsync(string username) =>
+        await users.FindByNameAsync(username.Trim()) ?? await users.FindByEmailAsync(username.Trim());
+
+    private async Task<bool> IsLastActiveOwnerAsync(AutoTrackUser user)
+    {
+        if (!user.IsActive || !(await users.GetRolesAsync(user)).Contains("Owner"))
+            return false;
+        var owners = await users.GetUsersInRoleAsync("Owner");
+        return owners.Count(owner => owner.IsActive) <= 1;
+    }
+
+    private void AddIdentityErrors(IdentityResult result, string key)
+    {
+        foreach (var error in result.Errors)
+            ModelState.AddModelError(key, error.Description);
+    }
+
+    private IActionResult IdentityError(IdentityResult result)
+    {
+        TempData["Error"] = string.Join("; ", result.Errors.Select(error => error.Description));
+        return RedirectToAction(nameof(Index));
+    }
+
+    private void SetRoles() => ViewBag.Roles = AvailableRoles;
 
     private IActionResult AdminError(string message)
     {

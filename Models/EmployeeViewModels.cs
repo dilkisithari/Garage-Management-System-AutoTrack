@@ -11,7 +11,7 @@ public class EmployeeRecord
     public decimal HourlyRate { get; set; }
     public string Phone { get; set; } = "";
     public bool IsActive { get; set; } = true;
-    /// <summary>Optional link to MockUserStore.Username so signed-in staff map automatically.</summary>
+    /// <summary>Optional username used to link an employee record to a sign-in account.</summary>
     public string? Username { get; set; }
     public DateTime JoinedDate { get; set; } = DateTime.Today;
 }

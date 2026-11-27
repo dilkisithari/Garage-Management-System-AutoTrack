@@ -1,12 +1,14 @@
 using AutoTrack.Models;
+using AutoTrack.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoTrack.Areas.FrontDesk.Controllers;
 
 [Area("FrontDesk")]
 [Authorize(Roles = "FrontDesk,Owner")]
-public class AppointmentsController : Controller
+public class AppointmentsController(AutoTrackDbContext db) : Controller
 {
     // GET: /FrontDesk/Appointments
     public IActionResult Index(string? status, string? search, string? date)
@@ -57,7 +59,7 @@ public class AppointmentsController : Controller
 
     // POST: /FrontDesk/Appointments/Confirm/5
     [HttpPost, ValidateAntiForgeryToken]
-    public IActionResult Confirm(int id)
+    public async Task<IActionResult> Confirm(int id)
     {
         var appt = MockAppointmentData.Get(id);
         if (appt == null)
@@ -68,6 +70,13 @@ public class AppointmentsController : Controller
 
         if (MockAppointmentData.Confirm(id))
         {
+            var storedAppointment = await db.CustomerAppointments
+                .SingleOrDefaultAsync(appointment => appointment.AppointmentNo == appt.AppointmentNo);
+            if (storedAppointment != null)
+            {
+                storedAppointment.Status = "Confirmed";
+                await db.SaveChangesAsync();
+            }
             TempData["Success"] = $"Appointment {appt.AppointmentNo} ({appt.VehicleNo}) confirmed successfully.";
         }
         else
@@ -80,7 +89,7 @@ public class AppointmentsController : Controller
 
     // POST: /FrontDesk/Appointments/Reschedule
     [HttpPost, ValidateAntiForgeryToken]
-    public IActionResult Reschedule(int id, DateTime newDate, string newSlot)
+    public async Task<IActionResult> Reschedule(int id, DateTime newDate, string newSlot)
     {
         var appt = MockAppointmentData.Get(id);
         if (appt == null)
@@ -103,6 +112,15 @@ public class AppointmentsController : Controller
 
         if (MockAppointmentData.Reschedule(id, newDate, newSlot))
         {
+            var storedAppointment = await db.CustomerAppointments
+                .SingleOrDefaultAsync(appointment => appointment.AppointmentNo == appt.AppointmentNo);
+            if (storedAppointment != null)
+            {
+                storedAppointment.AppointmentDate = newDate.Date;
+                storedAppointment.TimeSlot = newSlot.Trim();
+                storedAppointment.Status = "Confirmed";
+                await db.SaveChangesAsync();
+            }
             TempData["Success"] = $"Appointment {appt.AppointmentNo} rescheduled to {newDate:yyyy-MM-dd} at {newSlot}.";
         }
         else
@@ -115,7 +133,7 @@ public class AppointmentsController : Controller
 
     // POST: /FrontDesk/Appointments/Cancel
     [HttpPost, ValidateAntiForgeryToken]
-    public IActionResult Cancel(int id, string? reason)
+    public async Task<IActionResult> Cancel(int id, string? reason)
     {
         var appt = MockAppointmentData.Get(id);
         if (appt == null)
@@ -126,6 +144,13 @@ public class AppointmentsController : Controller
 
         if (MockAppointmentData.Cancel(id, reason))
         {
+            var storedAppointment = await db.CustomerAppointments
+                .SingleOrDefaultAsync(appointment => appointment.AppointmentNo == appt.AppointmentNo);
+            if (storedAppointment != null)
+            {
+                storedAppointment.Status = "Cancelled";
+                await db.SaveChangesAsync();
+            }
             TempData["Success"] = $"Appointment {appt.AppointmentNo} has been cancelled.";
         }
         else

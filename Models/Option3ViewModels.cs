@@ -49,7 +49,7 @@ public class CreateManagedUserViewModel
     [Display(Name = "Phone number")]
     public string? Phone { get; set; }
 
-    [Required, StringLength(60, MinimumLength = 6)]
+    [Required, StringLength(100, MinimumLength = 12)]
     [DataType(DataType.Password)]
     public string Password { get; set; } = "";
 
@@ -59,8 +59,18 @@ public class CreateManagedUserViewModel
 
 public class UserAdminIndexViewModel
 {
-    public List<MockUser> Users { get; set; } = new();
+    public List<ManagedUserViewModel> Users { get; set; } = new();
     public CreateManagedUserViewModel NewUser { get; set; } = new();
+}
+
+public class ManagedUserViewModel
+{
+    public string Id { get; set; } = "";
+    public string Username { get; set; } = "";
+    public string FullName { get; set; } = "";
+    public string? Phone { get; set; }
+    public string Role { get; set; } = "";
+    public bool IsActive { get; set; }
 }
 
 public class AuditLogEntry
@@ -68,6 +78,9 @@ public class AuditLogEntry
     public DateTime At { get; set; }
     public string Username { get; set; } = "";
     public string Action { get; set; } = "";
+    public string TableName { get; set; } = "";
+    public string? OldValues { get; set; }
+    public string? NewValues { get; set; }
     public string Details { get; set; } = "";
 }
 

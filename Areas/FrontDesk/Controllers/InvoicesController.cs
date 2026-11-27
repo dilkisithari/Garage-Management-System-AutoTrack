@@ -1,12 +1,14 @@
 using AutoTrack.Models;
+using AutoTrack.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoTrack.Areas.FrontDesk.Controllers;
 
 [Area("FrontDesk")]
 [Authorize(Roles = "FrontDesk,Owner")]
-public class InvoicesController : Controller
+public class InvoicesController(AutoTrackDbContext db) : Controller
 {
     // GET: /FrontDesk/Invoices
     public IActionResult Index(string? status, string? search)
@@ -52,14 +54,28 @@ public class InvoicesController : Controller
     }
 
     // GET/POST: /FrontDesk/Invoices/CreateFromJob?jobCardId=5
-    [HttpGet, HttpPost]
-    public IActionResult CreateFromJob(int jobCardId)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateFromJob(int jobCardId)
     {
         var invoice = MockInvoiceData.CreateFromJobCard(jobCardId);
         if (invoice == null)
         {
             TempData["Error"] = "Job card not found or could not generate invoice.";
             return RedirectToAction("Board", "JobCards");
+        }
+
+        var storedInvoice = await db.Invoices.SingleOrDefaultAsync(item => item.InvoiceNo == invoice.InvoiceNo);
+        if (storedInvoice == null)
+        {
+            db.Invoices.Add(new InvoiceRecord
+            {
+                InvoiceNo = invoice.InvoiceNo,
+                IssuedAt = invoice.IssueDate,
+                TotalAmount = invoice.TotalAmount,
+                PaidAmount = invoice.PaidAmount,
+                Status = invoice.Status
+            });
+            await db.SaveChangesAsync();
         }
 
         TempData["Success"] = $"Invoice {invoice.InvoiceNo} generated successfully for {invoice.JobCardNo}.";
@@ -99,7 +115,7 @@ public class InvoicesController : Controller
 
     // POST: /FrontDesk/Invoices/Payment
     [HttpPost, ValidateAntiForgeryToken]
-    public IActionResult Payment(PaymentEntryViewModel model)
+    public async Task<IActionResult> Payment(PaymentEntryViewModel model)
     {
         var invoice = MockInvoiceData.Get(model.InvoiceId);
         if (invoice == null) return NotFound();
@@ -125,14 +141,44 @@ public class InvoicesController : Controller
             return View(model);
         }
 
-        var cashierName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Front Desk Cashier";
-        var ok = MockInvoiceData.AddPayment(model, cashierName);
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var databaseInvoice = await db.Invoices.SingleOrDefaultAsync(item => item.InvoiceNo == invoice.InvoiceNo);
+        if (databaseInvoice == null)
+        {
+            databaseInvoice = new InvoiceRecord
+            {
+                InvoiceNo = invoice.InvoiceNo,
+                IssuedAt = invoice.IssueDate,
+                TotalAmount = invoice.TotalAmount,
+                PaidAmount = invoice.PaidAmount,
+                Status = invoice.Status
+            };
+            db.Invoices.Add(databaseInvoice);
+            await db.SaveChangesAsync();
+        }
 
-        if (!ok)
+        var cashierName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Front Desk Cashier";
+        var paymentAmount = Math.Round(model.Amount, 2);
+        databaseInvoice.PaidAmount = invoice.PaidAmount + paymentAmount;
+        databaseInvoice.Status = databaseInvoice.PaidAmount >= databaseInvoice.TotalAmount
+            ? "Paid"
+            : "Partially Paid";
+        db.Payments.Add(new PaymentRecord
+        {
+            Invoice = databaseInvoice,
+            Amount = paymentAmount,
+            Method = model.PaymentMethod,
+            PaidAt = model.PaymentDate
+        });
+        await db.SaveChangesAsync();
+
+        if (!MockInvoiceData.AddPayment(model, cashierName))
         {
             TempData["Error"] = "Unable to record payment.";
             return RedirectToAction(nameof(Details), new { id = model.InvoiceId });
         }
+
+        await transaction.CommitAsync();
 
         TempData["Success"] = $"Payment of LKR {model.Amount:N2} via {model.PaymentMethod} recorded for Invoice {invoice.InvoiceNo}.";
         return RedirectToAction(nameof(Details), new { id = model.InvoiceId });

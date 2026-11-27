@@ -1,13 +1,16 @@
-using System.Security.Claims;
+using AutoTrack.Data;
 using AutoTrack.Models;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoTrack.Controllers;
 
-public class AccountController : Controller
+public class AccountController(
+    AutoTrackDbContext db,
+    UserManager<AutoTrackUser> users,
+    SignInManager<AutoTrackUser> signInManager) : Controller
 {
     [AllowAnonymous, HttpGet]
     public IActionResult Login(string? returnUrl = null)
@@ -23,17 +26,27 @@ public class AccountController : Controller
     public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
     {
         ViewData["ReturnUrl"] = returnUrl;
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid)
+            return View(model);
 
-        var user = MockUserStore.Validate(model.Username, model.Password);
-        if (user == null)
+        var user = await users.FindByNameAsync(model.Username.Trim())
+            ?? await users.FindByEmailAsync(model.Username.Trim());
+        if (user == null || !user.IsActive)
         {
             ModelState.AddModelError(string.Empty, "Invalid username or password.");
             return View(model);
         }
 
-        await SignInAsync(user, model.RememberMe);
-        MockAuditLog.Add(user.Username, "Signed in", "Signed in to AutoTrack.");
+        var result = await signInManager.PasswordSignInAsync(
+            user,
+            model.Password,
+            model.RememberMe,
+            lockoutOnFailure: true);
+        if (!result.Succeeded)
+        {
+            ModelState.AddModelError(string.Empty, "Invalid username or password.");
+            return View(model);
+        }
 
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
             return LocalRedirect(returnUrl);
@@ -50,31 +63,38 @@ public class AccountController : Controller
     }
 
     [AllowAnonymous, HttpPost, ValidateAntiForgeryToken]
-    public IActionResult Register(RegisterViewModel model)
+    public async Task<IActionResult> Register(RegisterViewModel model)
     {
-        if (!ModelState.IsValid) return View(model);
-
-        if (MockUserStore.Exists(model.Email))
-        {
-            ModelState.AddModelError(nameof(model.Email), "An account with this e-mail already exists.");
+        if (!ModelState.IsValid)
             return View(model);
-        }
 
-        var user = new MockUser
+        var user = new AutoTrackUser
         {
-            Username = model.Email.Trim(),
-            Password = model.Password,
+            UserName = model.Email.Trim(),
+            Email = model.Email.Trim(),
             FullName = model.FullName.Trim(),
-            Phone = model.Phone.Trim(),
-            Role = "Customer"
+            PhoneNumber = model.Phone.Trim(),
+            EmailConfirmed = true
         };
-        if (!MockUserStore.Add(user))
+
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"EXEC sys.sp_set_session_context @key=N'ActorUsername', @value={user.UserName};");
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var created = await users.CreateAsync(user, model.Password);
+        if (!created.Succeeded)
         {
-            ModelState.AddModelError(nameof(model.Email), "An account with this e-mail already exists.");
+            AddIdentityErrors(created);
             return View(model);
         }
 
-        MockAuditLog.Add(user.Username, "Account created", "Created a customer account.");
+        var assigned = await users.AddToRoleAsync(user, "Customer");
+        if (!assigned.Succeeded)
+        {
+            AddIdentityErrors(assigned);
+            return View(model);
+        }
+
+        await transaction.CommitAsync();
         TempData["Success"] = "Account created. You can sign in now.";
         return RedirectToAction(nameof(Login));
     }
@@ -82,8 +102,7 @@ public class AccountController : Controller
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
-        MockAuditLog.Add(User.Identity?.Name ?? "", "Signed out", "Signed out of AutoTrack.");
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await signInManager.SignOutAsync();
         return RedirectToAction("Index", "Home");
     }
 
@@ -91,34 +110,30 @@ public class AccountController : Controller
     public IActionResult ChangePassword() => View(new ChangePasswordViewModel());
 
     [Authorize, HttpPost, ValidateAntiForgeryToken]
-    public IActionResult ChangePassword(ChangePasswordViewModel model)
+    public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid)
+            return View(model);
 
-        var username = User.Identity?.Name ?? "";
-        if (!MockUserStore.ChangePassword(username, model.OldPassword, model.NewPassword))
+        var user = await users.GetUserAsync(User);
+        if (user == null)
+            return Challenge();
+
+        var result = await users.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
+        if (!result.Succeeded)
         {
-            ModelState.AddModelError(nameof(model.OldPassword), "Current password is incorrect.");
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(nameof(model.NewPassword), error.Description);
             return View(model);
         }
 
-        MockAuditLog.Add(username, "Password changed", "Updated account password.");
         TempData["Success"] = "Password updated.";
         return RedirectToAction("Welcome", "Home");
     }
 
-    private async Task SignInAsync(MockUser user, bool remember)
+    private void AddIdentityErrors(IdentityResult result)
     {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.Name, user.Username),
-            new("FullName", user.FullName),
-            new(ClaimTypes.Role, user.Role)
-        };
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(identity),
-            new AuthenticationProperties { IsPersistent = remember });
+        foreach (var error in result.Errors)
+            ModelState.AddModelError(string.Empty, error.Description);
     }
 }

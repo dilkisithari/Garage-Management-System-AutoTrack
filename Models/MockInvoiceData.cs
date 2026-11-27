@@ -44,7 +44,7 @@ public static class MockInvoiceData
             if (model.Id == 0)
             {
                 model.Id = Invoices.Count == 0 ? 1 : Invoices.Max(i => i.Id) + 1;
-                model.InvoiceNo = $"INV-2026-{model.Id:000}";
+                model.InvoiceNo = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..25].ToUpperInvariant();
                 Invoices.Add(Clone(model));
             }
             else
@@ -75,7 +75,7 @@ public static class MockInvoiceData
             var invoice = new InvoiceViewModel
             {
                 Id = nextId,
-                InvoiceNo = $"INV-2026-{nextId:000}",
+                InvoiceNo = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..25].ToUpperInvariant(),
                 JobCardNo = job.JobNo,
                 IssueDate = DateTime.Today,
                 DueDate = DateTime.Today.AddDays(7),
