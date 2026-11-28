@@ -1,0 +1,158 @@
+@model PartFormViewModel
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Add part" : $"Edit {Model.Name}";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <a asp-action="Index" class="dt-back text-secondary-dt text-decoration-none mb-2 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i>Back to parts
+        </a>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-box-seam me-2 text-red"></i>@(isNew ? "Add New Part" : "Edit Part")</h1>
+        <p class="text-secondary-dt mb-0">
+            @(isNew ? "Register a new spare part in the workshop inventory." : $"Update stock and pricing for {Model.Name}.")
+        </p>
+    </div>
+</div>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id.ToString())" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert mb-4"></div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-info-circle me-2 text-red"></i>Part Details</h2>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label asp-for="Code" class="form-label">Part code <span class="text-danger">*</span></label>
+                        <input asp-for="Code" class="form-control text-uppercase" placeholder="e.g. OIL-5W30" maxlength="20" />
+                        <span asp-validation-for="Code" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="Name" class="form-label">Part name <span class="text-danger">*</span></label>
+                        <input asp-for="Name" class="form-control" placeholder="e.g. Engine Oil 5W-30 Synthetic (4L)" />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Category" class="form-label">Category <span class="text-danger">*</span></label>
+                        <select asp-for="Category" class="form-select">
+                            <option value="">-- Select category --</option>
+                            @foreach (var c in Model.CategoryOptions)
+                            {
+                                <option value="@c" selected="@(Model.Category == c)">@c</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Category" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Supplier" class="form-label">Supplier <span class="text-danger">*</span></label>
+                        <select asp-for="Supplier" class="form-select">
+                            <option value="">-- Select supplier --</option>
+                            @foreach (var s in Model.SupplierOptions)
+                            {
+                                <option value="@s" selected="@(Model.Supplier == s)">@s</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Supplier" class="text-danger small"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-boxes me-2 text-red"></i>Stock Levels</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="Stock" class="form-label">Current stock <span class="text-danger">*</span></label>
+                        <input asp-for="Stock" type="number" min="0" step="1" class="form-control" placeholder="e.g. 24" />
+                        <span asp-validation-for="Stock" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ReorderLevel" class="form-label">Reorder level <span class="text-danger">*</span></label>
+                        <input asp-for="ReorderLevel" type="number" min="0" step="1" class="form-control" placeholder="e.g. 10" />
+                        <span asp-validation-for="ReorderLevel" class="text-danger small"></span>
+                        <div class="form-text text-secondary-dt">An alert is raised when stock falls below this number.</div>
+                    </div>
+                </div>
+                <div id="stockHint" class="alert alert-warning dt-alert mt-3 mb-0 d-none">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Stock is below the reorder level. This part will appear on the low-stock page.
+                </div>
+            </section>
+
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-cash-coin me-2 text-red"></i>Pricing (LKR)</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="UnitCost" class="form-label">Unit cost <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">LKR</span>
+                            <input asp-for="UnitCost" type="number" min="0.01" step="0.01" class="form-control" placeholder="e.g. 9800.00" />
+                        </div>
+                        <span asp-validation-for="UnitCost" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Price" class="form-label">Selling price <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">LKR</span>
+                            <input asp-for="Price" type="number" min="0.01" step="0.01" class="form-control" placeholder="e.g. 12500.00" />
+                        </div>
+                        <span asp-validation-for="Price" class="text-danger small"></span>
+                    </div>
+                </div>
+                <p class="text-secondary-dt small mt-3 mb-0">Margin: <strong id="marginText" class="text-white">-</strong></p>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="dt-card p-4 mb-4">
+                <h2 class="dt-h2"><i class="bi bi-toggles me-2 text-red"></i>Status</h2>
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" id="isActiveSwitch" />
+                    <label class="form-check-label text-white" for="isActiveSwitch">Active part</label>
+                </div>
+                <p class="text-secondary-dt small mb-0">Inactive parts stay in records but are left out of low-stock alerts.</p>
+            </section>
+
+            <section class="dt-card p-4">
+                <button type="submit" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-check-lg me-1"></i>@(isNew ? "Save Part" : "Save Changes")
+                </button>
+                <a asp-action="Index" class="btn btn-outline-dt w-100">Cancel</a>
+            </section>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var stock = document.getElementById('Stock');
+            var reorder = document.getElementById('ReorderLevel');
+            var cost = document.getElementById('UnitCost');
+            var price = document.getElementById('Price');
+            var hint = document.getElementById('stockHint');
+            var margin = document.getElementById('marginText');
+
+            function update() {
+                var s = parseFloat(stock.value), r = parseFloat(reorder.value);
+                hint.classList.toggle('d-none', !(s >= 0 && r >= 0 && s < r));
+
+                var c = parseFloat(cost.value), p = parseFloat(price.value);
+                if (c > 0 && p >= 0) {
+                    var m = (p - c) / c * 100;
+                    margin.textContent = m.toFixed(1) + '% (LKR ' + (p - c).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' per unit)';
+                    margin.className = m < 0 ? 'text-danger' : 'text-success';
+                } else {
+                    margin.textContent = '-';
+                    margin.className = 'text-white';
+                }
+            }
+            [stock, reorder, cost, price].forEach(function (el) { el.addEventListener('input', update); });
+            update();
+        })();
+    </script>
+}
