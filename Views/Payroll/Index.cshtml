@@ -1,0 +1,221 @@
+@using AutoTrack.Models.Payroll
+@model PayrollRunViewModel
+@{
+    ViewData["Title"] = "Payroll Run";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Finance &amp; Staff Compensation</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-wallet2 me-2 text-red"></i>Payroll Run</h1>
+        <p class="text-secondary-dt mb-0">
+            Review monthly hours, overtime, EPF deductions and net salaries in LKR for @Model.SelectedMonthLabel.
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="Expenses" asp-route-month="@Model.SelectedMonth" class="btn btn-outline-dt">
+            <i class="bi bi-receipt-cutoff me-1"></i>Garage Expenses
+        </a>
+        @if (Model.IsMonthProcessed)
+        {
+            <button type="button" class="btn btn-success" disabled>
+                <i class="bi bi-check-circle-fill me-1"></i>Payroll Processed
+            </button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#runPayrollModal">
+                <i class="bi bi-play-circle me-1"></i>Run Payroll
+            </button>
+        }
+    </div>
+</div>
+
+<!-- Month Picker & Status Bar -->
+<div class="dt-card p-3 mb-4">
+    <form method="get" asp-action="Index" class="row g-2 align-items-end">
+        <div class="col-sm-6 col-md-4 col-lg-3">
+            <label for="monthSelect" class="form-label small text-secondary-dt mb-1">Pay Month</label>
+            <select id="monthSelect" name="month" class="form-select" onchange="this.form.submit()">
+                @foreach (var opt in Model.MonthOptions)
+                {
+                    <option value="@opt.Value" selected="@(opt.Value == Model.SelectedMonth)">@opt.Label</option>
+                }
+            </select>
+        </div>
+        <div class="col-sm-6 col-md-3 col-lg-2">
+            <button type="submit" class="btn btn-outline-dt w-100">
+                <i class="bi bi-arrow-clockwise me-1"></i>Load Month
+            </button>
+        </div>
+        <div class="col-md-5 col-lg-7 text-md-end pt-2 pt-md-0">
+            @if (Model.IsMonthProcessed && Model.ProcessedAt.HasValue)
+            {
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                    <i class="bi bi-check2-all me-1"></i>
+                    Processed on @Model.ProcessedAt.Value.ToString("dd MMM yyyy, HH:mm")
+                    @if (!string.IsNullOrWhiteSpace(Model.ProcessedBy))
+                    {
+                        <span>by @Model.ProcessedBy</span>
+                    }
+                </span>
+            }
+            else
+            {
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
+                    <i class="bi bi-hourglass-split me-1"></i>Pending payroll run for @Model.SelectedMonthLabel
+                </span>
+            }
+        </div>
+    </form>
+</div>
+
+<!-- Summary KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="dt-card p-3 h-100">
+            <div class="small text-secondary-dt text-uppercase">Employees</div>
+            <div class="fs-4 fw-bold text-white mt-1">@Model.Rows.Count</div>
+            <div class="small text-secondary-dt">Active workshop &amp; office staff</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="dt-card p-3 h-100">
+            <div class="small text-secondary-dt text-uppercase">Total Hours</div>
+            <div class="fs-4 fw-bold text-white mt-1">@Model.TotalRegularHours.ToString("N1") <span class="fs-6 fw-normal text-secondary-dt">hrs</span></div>
+            <div class="small text-info">+ @Model.TotalOvertimeHours.ToString("N1") hrs overtime</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="dt-card p-3 h-100">
+            <div class="small text-secondary-dt text-uppercase">Employee EPF (8%)</div>
+            <div class="fs-4 fw-bold text-white mt-1">LKR @Model.TotalEpf.ToString("N2")</div>
+            <div class="small text-secondary-dt">Deducted from basic pay</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="dt-card p-3 h-100 border-danger">
+            <div class="small text-secondary-dt text-uppercase">Total Net Payroll</div>
+            <div class="fs-4 fw-bold text-success mt-1">LKR @Model.TotalNetSalary.ToString("N2")</div>
+            <div class="small text-secondary-dt">OT paid at 1.5&times; hourly rate</div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Payroll Table -->
+<div class="dt-card p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead class="text-secondary small text-uppercase">
+                <tr>
+                    <th class="ps-4">Employee</th>
+                    <th class="text-end">Hours</th>
+                    <th class="text-end">Rate (LKR/hr)</th>
+                    <th class="text-end">Overtime</th>
+                    <th class="text-end">EPF 8% (LKR)</th>
+                    <th class="text-end">Net Salary (LKR)</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-end pe-4">Payslip</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold text-white">@row.EmployeeName</div>
+                            <small class="text-secondary-dt">@row.Role</small>
+                        </td>
+                        <td class="text-end text-white">@row.RegularHours.ToString("N1")</td>
+                        <td class="text-end text-secondary-dt">@row.HourlyRate.ToString("N2")</td>
+                        <td class="text-end">
+                            <div class="text-white">@row.OvertimeHours.ToString("N1") hrs</div>
+                            <small class="text-secondary-dt">LKR @row.OvertimePay.ToString("N2")</small>
+                        </td>
+                        <td class="text-end text-secondary-dt">@row.EpfDeduction.ToString("N2")</td>
+                        <td class="text-end fw-bold text-white">LKR @row.NetSalary.ToString("N2")</td>
+                        <td class="text-center">
+                            @if (row.IsPaid)
+                            {
+                                <span class="badge bg-success">Paid</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            }
+                        </td>
+                        <td class="text-end pe-4">
+                            <a asp-action="Payslip"
+                               asp-route-employeeId="@row.EmployeeId"
+                               asp-route-month="@Model.SelectedMonth"
+                               class="btn btn-sm btn-outline-dt">
+                                <i class="bi bi-printer me-1"></i>Payslip
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot class="border-top border-secondary">
+                <tr class="fw-bold">
+                    <td class="ps-4 text-white">Total (@Model.Rows.Count staff)</td>
+                    <td class="text-end text-white">@Model.TotalRegularHours.ToString("N1")</td>
+                    <td class="text-end text-secondary-dt">&mdash;</td>
+                    <td class="text-end text-white">
+                        <div>@Model.TotalOvertimeHours.ToString("N1") hrs</div>
+                        <small class="text-secondary-dt fw-normal">LKR @Model.TotalOvertimePay.ToString("N2")</small>
+                    </td>
+                    <td class="text-end text-white">@Model.TotalEpf.ToString("N2")</td>
+                    <td class="text-end text-success fs-6">LKR @Model.TotalNetSalary.ToString("N2")</td>
+                    <td></td>
+                    <td class="pe-4"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- Run Payroll Confirmation Modal -->
+<div class="modal fade" id="runPayrollModal" tabindex="-1" aria-labelledby="runPayrollModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-secondary text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="runPayrollModalLabel">
+                    <i class="bi bi-shield-check text-red me-2"></i>Confirm Payroll Run
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    You are about to finalize and run payroll for <strong>@Model.SelectedMonthLabel</strong>.
+                </p>
+                <div class="p-3 rounded bg-black bg-opacity-50 border border-secondary mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary-dt">Employees included:</span>
+                        <strong>@Model.Rows.Count staff</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary-dt">Total regular + OT hours:</span>
+                        <strong>@((Model.TotalRegularHours + Model.TotalOvertimeHours).ToString("N1")) hrs</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary-dt">Total Net Payout:</span>
+                        <strong class="text-success">LKR @Model.TotalNetSalary.ToString("N2")</strong>
+                    </div>
+                </div>
+                <p class="small text-secondary-dt mb-0">
+                    All @Model.Rows.Count employee rows will be marked as <strong>Paid</strong> for this month.
+                </p>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-dt" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" asp-action="RunPayroll" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="month" value="@Model.SelectedMonth" />
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Confirm &amp; Run Payroll
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
