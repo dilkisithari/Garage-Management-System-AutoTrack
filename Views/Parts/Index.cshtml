@@ -1,0 +1,252 @@
+@model PartListViewModel
+@{
+    ViewData["Title"] = "Parts Inventory";
+    var filtersActive = !string.IsNullOrWhiteSpace(Model.Search) || !string.IsNullOrWhiteSpace(Model.Category) || !string.IsNullOrWhiteSpace(Model.Stock);
+}
+
+@section Styles {
+    <style>
+        .part-row-low > td { background-color: rgba(220, 53, 69, .16) !important; box-shadow: none; }
+        .part-row-low > td:first-child { box-shadow: inset 4px 0 0 #dc3545; }
+        .part-row-out > td { background-color: rgba(220, 53, 69, .28) !important; }
+        .part-stat { display: flex; align-items: center; gap: .9rem; }
+        .part-stat .bi { font-size: 1.8rem; }
+        .part-stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.1; color: #fff; }
+        .part-stat-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .6px; color: var(--dt-gray-400, #9aa0a6); }
+    </style>
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Workshop Stores</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-box-seam me-2 text-red"></i>Parts Inventory</h1>
+        <p class="text-secondary-dt mb-0">Track stock levels, costs and selling prices for every spare part.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="LowStock" class="btn btn-outline-dt">
+            <i class="bi bi-exclamation-triangle me-1"></i>Low-stock alerts
+            @if (Model.LowStockCount > 0)
+            {
+                <span class="badge bg-danger ms-1">@Model.LowStockCount</span>
+            }
+        </a>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add Part
+        </a>
+    </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="dt-card p-3 part-stat h-100">
+            <i class="bi bi-boxes text-red"></i>
+            <div><div class="part-stat-value">@Model.TotalCount</div><div class="part-stat-label">Part types</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="dt-card p-3 part-stat h-100">
+            <i class="bi bi-exclamation-triangle text-warning"></i>
+            <div><div class="part-stat-value">@Model.LowStockCount</div><div class="part-stat-label">Below reorder level</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="dt-card p-3 part-stat h-100">
+            <i class="bi bi-x-octagon text-danger"></i>
+            <div><div class="part-stat-value">@Model.OutOfStockCount</div><div class="part-stat-label">Out of stock</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="dt-card p-3 part-stat h-100">
+            <i class="bi bi-cash-stack text-success"></i>
+            <div><div class="part-stat-value fs-5">LKR @Model.StockValue.ToString("N0")</div><div class="part-stat-label">Stock value (at cost)</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Search & filters -->
+<div class="dt-card dt-toolbar mb-4 p-3">
+    <form method="get" asp-action="Index" class="row g-2 align-items-center">
+        <div class="col-lg-5">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input name="search" type="search" value="@Model.Search" class="form-control"
+                       placeholder="Search by code, name or supplier..." />
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <select name="category" class="form-select" aria-label="Filter by category">
+                <option value="" selected="@(string.IsNullOrEmpty(Model.Category))">All categories</option>
+                @foreach (var c in Model.Categories)
+                {
+                    <option value="@c" selected="@(Model.Category == c)">@c</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6 col-lg-2">
+            <select name="stock" class="form-select" aria-label="Filter by stock level">
+                <option value="" selected="@(string.IsNullOrEmpty(Model.Stock))">All stock</option>
+                <option value="low" selected="@(Model.Stock == "low")">Low stock</option>
+                <option value="out" selected="@(Model.Stock == "out")">Out of stock</option>
+                <option value="ok" selected="@(Model.Stock == "ok")">Healthy stock</option>
+            </select>
+        </div>
+        <div class="col-lg-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
+            <a asp-action="Index" class="btn btn-outline-dt" title="Reset filters"><i class="bi bi-x-circle"></i></a>
+        </div>
+    </form>
+</div>
+
+@if (Model.Items.Count == 0)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-box-seam fs-1 text-secondary mb-3 d-block"></i>
+        <h4 class="text-white">No parts found</h4>
+        <p class="text-secondary-dt mb-3">
+            @(filtersActive ? "No parts match your current search or filters." : "No parts have been added yet.")
+        </p>
+        @if (filtersActive)
+        {
+            <a asp-action="Index" class="btn btn-outline-dt btn-sm">Clear filters</a>
+        }
+        else
+        {
+            <a asp-action="Create" class="btn btn-primary btn-sm">Add the first part</a>
+        }
+    </div>
+}
+else
+{
+    <div class="dt-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead class="text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Part code</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th class="text-end">Stock</th>
+                        <th class="text-end">Reorder level</th>
+                        <th class="text-end">Unit cost</th>
+                        <th class="text-end">Price</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Items)
+                    {
+                        <tr class="@(p.IsOutOfStock ? "part-row-low part-row-out" : p.IsLowStock ? "part-row-low" : "")">
+                            <td class="ps-4"><code>@p.Code</code></td>
+                            <td>
+                                <div class="fw-bold text-white">@p.Name</div>
+                                <small class="text-secondary-dt"><i class="bi bi-truck me-1"></i>@p.Supplier</small>
+                                @if (!p.IsActive)
+                                {
+                                    <span class="badge bg-secondary ms-1">Inactive</span>
+                                }
+                            </td>
+                            <td><span class="badge bg-dark border border-secondary text-light">@p.Category</span></td>
+                            <td class="text-end">
+                                <span class="fw-bold @(p.IsLowStock ? "text-danger" : "text-white")">@p.Stock</span>
+                                @if (p.IsOutOfStock)
+                                {
+                                    <div><span class="badge bg-danger">Out of stock</span></div>
+                                }
+                                else if (p.IsLowStock)
+                                {
+                                    <div><span class="badge bg-danger-subtle text-danger-emphasis">Low stock</span></div>
+                                }
+                            </td>
+                            <td class="text-end text-secondary-dt">@p.ReorderLevel</td>
+                            <td class="text-end">LKR @p.UnitCost.ToString("N2")</td>
+                            <td class="text-end fw-semibold text-white">
+                                LKR @p.Price.ToString("N2")
+                                <div class="small text-success fw-normal">+@p.MarginPercent%</div>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-outline-dt" title="Edit part">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger"
+                                            title="Delete part"
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                            data-part-id="@p.Id" data-part-name="@p.Name">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav aria-label="Parts list pages" class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-category="@Model.Category"
+                       asp-route-stock="@Model.Stock" asp-route-page="@(Model.Page - 1)" aria-label="Previous">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                @for (int p = 1; p <= Model.TotalPages; p++)
+                {
+                    <li class="page-item @(p == Model.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-category="@Model.Category"
+                           asp-route-stock="@Model.Stock" asp-route-page="@p">@p</a>
+                    </li>
+                }
+                <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-category="@Model.Category"
+                       asp-route-stock="@Model.Stock" asp-route-page="@(Model.Page + 1)" aria-label="Next">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    }
+    <p class="text-center text-secondary-dt small mt-2">
+        Showing @((Model.Page - 1) * Model.PageSize + 1)&ndash;@(Math.Min(Model.Page * Model.PageSize, Model.FilteredCount))
+        of @Model.FilteredCount part@(Model.FilteredCount == 1 ? "" : "s")
+        &middot; <span class="text-danger">red rows are below their reorder level</span>
+    </p>
+}
+
+<!-- Delete confirmation -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" asp-action="Delete" class="modal-content" id="deleteForm">
+            @Html.AntiForgeryToken()
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="deleteModalLabel"><i class="bi bi-trash me-2 text-danger"></i>Delete part?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                You are about to delete <strong id="deletePartName"></strong>. This cannot be undone.
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-dt" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var modal = document.getElementById('deleteModal');
+            if (!modal) return;
+            modal.addEventListener('show.bs.modal', function (e) {
+                var btn = e.relatedTarget;
+                document.getElementById('deletePartName').textContent = btn.getAttribute('data-part-name');
+                document.getElementById('deleteForm').action = '@Url.Action("Delete", "Parts")/' + btn.getAttribute('data-part-id');
+            });
+        })();
+    </script>
+}

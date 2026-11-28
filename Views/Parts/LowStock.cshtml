@@ -1,0 +1,200 @@
+@model LowStockViewModel
+@{
+    ViewData["Title"] = "Low-stock alerts";
+}
+
+@section Styles {
+    <style>
+        .part-row-low > td { background-color: rgba(220, 53, 69, .16) !important; }
+        .part-row-low > td:first-child { box-shadow: inset 4px 0 0 #dc3545; }
+        .part-row-out > td { background-color: rgba(220, 53, 69, .28) !important; }
+    </style>
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <a asp-action="Index" class="dt-back text-secondary-dt text-decoration-none mb-2 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i>Back to parts
+        </a>
+        <p class="dt-eyebrow mb-1"><span></span>Workshop Stores</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-exclamation-triangle me-2 text-red"></i>Low-Stock Alerts</h1>
+        <p class="text-secondary-dt mb-0">
+            @Model.Items.Count part@(Model.Items.Count == 1 ? " is" : "s are") below the reorder level
+            @if (Model.OutOfStockCount > 0)
+            {
+                <span>&middot; <span class="text-danger">@Model.OutOfStockCount out of stock</span></span>
+            }
+            @if (Model.Items.Count > 0)
+            {
+                <span>&middot; est. reorder cost LKR @Model.EstimatedReorderCost.ToString("N0")</span>
+            }
+        </p>
+    </div>
+    <a asp-action="Create" class="btn btn-outline-dt"><i class="bi bi-plus-lg me-1"></i>Add Part</a>
+</div>
+
+@if (Model.Items.Count == 0)
+{
+    <div class="dt-card p-5 text-center">
+        <i class="bi bi-check-circle fs-1 text-success mb-3 d-block"></i>
+        <h4 class="text-white">All stock levels are healthy</h4>
+        <p class="text-secondary-dt mb-3">No active part is below its reorder level.</p>
+        <a asp-action="Index" class="btn btn-outline-dt btn-sm">View all parts</a>
+    </div>
+}
+else
+{
+    <div class="dt-card p-0 overflow-hidden mb-4">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead class="text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Part</th>
+                        <th class="text-end">Stock</th>
+                        <th class="text-end">Reorder level</th>
+                        <th class="text-end">Shortfall</th>
+                        <th>Supplier</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Items)
+                    {
+                        var suggested = AutoTrack.Controllers.PartsController.SuggestedQuantity(p);
+                        <tr class="@(p.IsOutOfStock ? "part-row-low part-row-out" : "part-row-low")">
+                            <td class="ps-4">
+                                <div class="fw-bold text-white">@p.Name</div>
+                                <small class="text-secondary-dt"><code>@p.Code</code> &middot; @p.Category</small>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-danger">@p.Stock</span>
+                                @if (p.IsOutOfStock)
+                                {
+                                    <div><span class="badge bg-danger">Out of stock</span></div>
+                                }
+                            </td>
+                            <td class="text-end text-secondary-dt">@p.ReorderLevel</td>
+                            <td class="text-end fw-semibold text-white">@(p.ReorderLevel - p.Stock)</td>
+                            <td>
+                                <div class="text-white">@p.Supplier</div>
+                                <a href="tel:@p.SupplierPhone" class="small text-secondary-dt text-decoration-none">
+                                    <i class="bi bi-telephone me-1 text-red"></i>@p.SupplierPhone
+                                </a>
+                            </td>
+                            <td class="text-end pe-4">
+                                <button type="button" class="btn btn-primary btn-sm"
+                                        data-bs-toggle="modal" data-bs-target="#reorderModal"
+                                        data-part-id="@p.Id"
+                                        data-part-name="@p.Name"
+                                        data-part-code="@p.Code"
+                                        data-supplier="@p.Supplier"
+                                        data-unit-cost="@p.UnitCost.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        data-suggested="@suggested">
+                                    <i class="bi bi-cart-plus me-1"></i>Create reorder
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (Model.RecentReorders.Count > 0)
+{
+    <div class="dt-card p-4">
+        <h2 class="dt-h2"><i class="bi bi-clock-history me-2 text-red"></i>Recent reorders (this session)</h2>
+        <div class="table-responsive">
+            <table class="table table-dark align-middle mb-0">
+                <thead class="text-secondary small text-uppercase">
+                    <tr><th>Requested</th><th>Part</th><th>Supplier</th><th class="text-end">Qty</th><th class="text-end">Est. cost</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.RecentReorders)
+                    {
+                        <tr>
+                            <td class="text-secondary-dt">@r.RequestedOn.ToString("dd MMM, HH:mm")</td>
+                            <td><code>@r.PartCode</code> @r.PartName</td>
+                            <td>@r.Supplier</td>
+                            <td class="text-end">@r.Quantity</td>
+                            <td class="text-end">LKR @r.EstimatedCost.ToString("N2")</td>
+                            <td><span class="badge bg-info text-dark">@r.Status</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<!-- Create reorder popup -->
+<div class="modal fade" id="reorderModal" tabindex="-1" aria-labelledby="reorderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" asp-action="CreateReorder" class="modal-content needs-validation" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="PartId" id="reorderPartId" />
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="reorderModalLabel"><i class="bi bi-cart-plus me-2 text-red"></i>Create reorder</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1 fw-bold text-white" id="reorderPartName"></p>
+                <p class="small text-secondary-dt mb-3">Supplier: <span id="reorderSupplier" class="text-white"></span></p>
+
+                <label for="reorderQty" class="form-label">Quantity to order <span class="text-danger">*</span></label>
+                <input type="number" name="Quantity" id="reorderQty" class="form-control" min="1" max="100000" step="1" required />
+                <div class="invalid-feedback">Enter a whole number between 1 and 100,000.</div>
+                <div class="form-text text-secondary-dt">Suggested quantity brings stock up to twice the reorder level.</div>
+
+                <p class="mt-3 mb-0">Estimated cost: <strong id="reorderTotal" class="text-white">LKR 0.00</strong></p>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-dt" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Confirm reorder</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var modal = document.getElementById('reorderModal');
+            if (!modal) return;
+            var form = modal.querySelector('form');
+            var qty = document.getElementById('reorderQty');
+            var total = document.getElementById('reorderTotal');
+            var unitCost = 0;
+
+            function money(v) {
+                return 'LKR ' + v.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            function recalc() {
+                var q = parseInt(qty.value, 10);
+                total.textContent = money(q > 0 ? q * unitCost : 0);
+            }
+
+            modal.addEventListener('show.bs.modal', function (e) {
+                var b = e.relatedTarget;
+                unitCost = parseFloat(b.getAttribute('data-unit-cost')) || 0;
+                document.getElementById('reorderPartId').value = b.getAttribute('data-part-id');
+                document.getElementById('reorderPartName').textContent =
+                    b.getAttribute('data-part-code') + ' - ' + b.getAttribute('data-part-name');
+                document.getElementById('reorderSupplier').textContent = b.getAttribute('data-supplier');
+                qty.value = b.getAttribute('data-suggested');
+                form.classList.remove('was-validated');
+                recalc();
+            });
+            modal.addEventListener('shown.bs.modal', function () { qty.focus(); qty.select(); });
+            qty.addEventListener('input', recalc);
+            form.addEventListener('submit', function (ev) {
+                if (!form.checkValidity()) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        })();
+    </script>
+}
