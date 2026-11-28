@@ -82,6 +82,16 @@
                                       <li><a class="dropdown-item" asp-area="" asp-controller="Attendance" asp-action="Sheet"><i class="bi bi-calendar3-week me-2"></i>Attendance Sheet</a></li>
                                   </ul>
                               </li>
+
+                              <li class="nav-item dropdown">
+                                  <a class="nav-link dt-nav-link dropdown-toggle @(controller == "Payroll" ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                      Payroll
+                                  </a>
+                                  <ul class="dropdown-menu dt-dropdown">
+                                      <li><a class="dropdown-item" asp-area="" asp-controller="Payroll" asp-action="Index"><i class="bi bi-wallet2 me-2"></i>Payroll Run</a></li>
+                                      <li><a class="dropdown-item" asp-area="" asp-controller="Payroll" asp-action="Expenses"><i class="bi bi-receipt-cutoff me-2"></i>Garage Expenses</a></li>
+                                  </ul>
+                              </li>
                         }
 
                         @if (role == "Mechanic")

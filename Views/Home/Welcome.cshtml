@@ -83,6 +83,18 @@
                 <div><strong>Attendance Sheet</strong><span>Monthly hours, late arrivals &amp; overtime</span></div>
             </a>
         </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="" asp-controller="Payroll" asp-action="Index">
+                <i class="bi bi-wallet2"></i>
+                <div><strong>Payroll Run</strong><span>Monthly salaries, overtime &amp; payslips</span></div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="dt-quick" asp-area="" asp-controller="Payroll" asp-action="Expenses">
+                <i class="bi bi-receipt-cutoff"></i>
+                <div><strong>Garage Expenses</strong><span>Track workshop overheads &amp; monthly totals</span></div>
+            </a>
+        </div>
         @if (role == "Owner")
         {
             <div class="col-md-6 col-xl-4">

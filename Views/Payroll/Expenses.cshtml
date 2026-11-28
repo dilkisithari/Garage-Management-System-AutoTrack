@@ -1,0 +1,193 @@
+@using AutoTrack.Models.Payroll
+@model ExpensePageViewModel
+@{
+    ViewData["Title"] = "Garage Expenses";
+}
+
+<div class="dt-page-head mb-4">
+    <div>
+        <p class="dt-eyebrow mb-1"><span></span>Finance &amp; Overheads</p>
+        <h1 class="dt-h1 mb-1"><i class="bi bi-receipt-cutoff me-2 text-red"></i>Garage Expenses</h1>
+        <p class="text-secondary-dt mb-0">
+            Record workshop overheads (electricity, rent, tools) and track monthly totals for @Model.SelectedMonthLabel.
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="Index" asp-route-month="@Model.SelectedMonth" class="btn btn-outline-dt">
+            <i class="bi bi-wallet2 me-1"></i>Payroll Run
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Add Expense Form -->
+    <div class="col-lg-4">
+        <section class="dt-card p-4">
+            <h2 class="dt-h2"><i class="bi bi-plus-circle me-2 text-red"></i>Record Expense</h2>
+
+            <form method="post" asp-action="AddExpense" novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="month" value="@Model.SelectedMonth" />
+                <input type="hidden" name="category" value="@Model.SelectedCategory" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger dt-alert mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Form.Category" class="form-label">Category <span class="text-danger">*</span></label>
+                    <select asp-for="Form.Category" class="form-select">
+                        @foreach (var cat in Model.CategoryOptions)
+                        {
+                            <option value="@cat">@cat</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Form.Category" class="field-validation-msg"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Form.Amount" class="form-label">Amount (LKR) <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">LKR</span>
+                        <input asp-for="Form.Amount" type="number" step="0.01" min="1" class="form-control" placeholder="e.g. 12500" />
+                    </div>
+                    <span asp-validation-for="Form.Amount" class="field-validation-msg"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Form.Date" class="form-label">Date <span class="text-danger">*</span></label>
+                    <input asp-for="Form.Date" type="date" class="form-control" />
+                    <span asp-validation-for="Form.Date" class="field-validation-msg"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Form.Notes" class="form-label">Notes <span class="text-danger">*</span></label>
+                    <textarea asp-for="Form.Notes" rows="3" class="form-control" placeholder="e.g. CEB workshop bill or tools for CAB-1234"></textarea>
+                    <span asp-validation-for="Form.Notes" class="field-validation-msg"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-check-lg me-1"></i>Add Expense
+                </button>
+            </form>
+        </section>
+    </div>
+
+    <!-- Right Column: Monthly Total, Filters & Expense List -->
+    <div class="col-lg-8">
+        <!-- Monthly Total Highlight -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+                <div class="dt-card p-3 h-100 border-danger">
+                    <div class="small text-secondary-dt text-uppercase">
+                        @(string.IsNullOrEmpty(Model.SelectedCategory) ? $"Monthly Total ({Model.SelectedMonthLabel})" : $"{Model.SelectedCategory} Total ({Model.SelectedMonthLabel})")
+                    </div>
+                    <div class="fs-3 fw-bold text-white mt-1">LKR @Model.MonthlyTotal.ToString("N2")</div>
+                    <div class="small text-secondary-dt">@Model.Items.Count expense entr@(Model.Items.Count == 1 ? "y" : "ies") shown</div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="dt-card p-3 h-100">
+                    <div class="small text-secondary-dt text-uppercase">All Categories (@Model.SelectedMonthLabel)</div>
+                    <div class="fs-3 fw-bold text-white mt-1">LKR @Model.AllCategoriesMonthlyTotal.ToString("N2")</div>
+                    <div class="small text-secondary-dt">@Model.AllCategoriesCount total entries this month</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Month & Category Filter -->
+        <div class="dt-card p-3 mb-4">
+            <form method="get" asp-action="Expenses" class="row g-2 align-items-end">
+                <div class="col-sm-5">
+                    <label for="expMonth" class="form-label small text-secondary-dt mb-1">Month</label>
+                    <select id="expMonth" name="month" class="form-select">
+                        @foreach (var opt in Model.MonthOptions)
+                        {
+                            <option value="@opt.Value" selected="@(opt.Value == Model.SelectedMonth)">@opt.Label</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label for="expCategory" class="form-label small text-secondary-dt mb-1">Category</label>
+                    <select id="expCategory" name="category" class="form-select">
+                        <option value="" selected="@(string.IsNullOrEmpty(Model.SelectedCategory))">All categories</option>
+                        @foreach (var cat in Model.CategoryOptions)
+                        {
+                            <option value="@cat" selected="@(cat == Model.SelectedCategory)">@cat</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-sm-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
+                    <a asp-action="Expenses" asp-route-month="@Model.SelectedMonth" class="btn btn-outline-dt" title="Reset category filter">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Expense List Table -->
+        @if (Model.Items.Count == 0)
+        {
+            <div class="dt-card p-5 text-center">
+                <i class="bi bi-receipt fs-1 text-secondary mb-3 d-block"></i>
+                <h4 class="text-white">No expenses recorded</h4>
+                <p class="text-secondary-dt mb-0">
+                    No expenses found for @Model.SelectedMonthLabel@(string.IsNullOrEmpty(Model.SelectedCategory) ? "" : $" in {Model.SelectedCategory}").
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="dt-card p-0 overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                        <thead class="text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Date</th>
+                                <th>Category</th>
+                                <th>Notes</th>
+                                <th class="text-end">Amount (LKR)</th>
+                                <th class="text-end pe-4">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td class="ps-4 text-nowrap text-secondary-dt">@item.Date.ToString("dd MMM yyyy")</td>
+                                    <td>
+                                        <span class="badge bg-dark border border-secondary text-light">@item.Category</span>
+                                    </td>
+                                    <td class="text-white">@item.Notes</td>
+                                    <td class="text-end fw-semibold text-white text-nowrap">LKR @item.Amount.ToString("N2")</td>
+                                    <td class="text-end pe-4">
+                                        <form method="post" asp-action="DeleteExpense" class="d-inline"
+                                              onsubmit="return confirm('Remove this @item.Category expense of LKR @item.Amount.ToString("N2")?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <input type="hidden" name="month" value="@Model.SelectedMonth" />
+                                            <input type="hidden" name="category" value="@Model.SelectedCategory" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete expense">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="border-top border-secondary">
+                            <tr class="fw-bold">
+                                <td colspan="3" class="ps-4 text-white">Monthly Total</td>
+                                <td class="text-end text-success fs-6 text-nowrap">LKR @Model.MonthlyTotal.ToString("N2")</td>
+                                <td class="pe-4"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
